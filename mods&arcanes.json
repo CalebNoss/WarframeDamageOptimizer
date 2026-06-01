@@ -1,0 +1,330 @@
+[
+    {
+        "name": "Serration",
+        "weapon_classes": ["primary"],
+        "weapon_subtypes": ["rifle", "beam", "launcher"],
+        "firing_modes": [],
+        "incompatible_with": [],
+        "stats": {
+            "totalDamageBonus": 1.65
+        },
+        "multiplicative_when": null
+    },
+    {
+        "name": "Heavy Caliber",
+        "weapon_classes": ["primary"],
+        "weapon_subtypes": ["rifle", "beam", "launcher"],
+        "firing_modes": [],
+        "incompatible_with": [],
+        "stats": {
+            "totalDamageBonus": 1.65
+        },
+        "multiplicative_when": null
+    },
+    {
+        "name": "Crash Course",
+        "weapon_classes": ["primary"],
+        "weapon_subtypes": ["rifle", "beam", "launcher"],
+        "firing_modes": [],
+        "incompatible_with": [],
+        "stats": {
+            "impactDamageBonus": 1.20
+        },
+        "multiplicative_when": null
+    },
+    {
+        "name": "Fanged Fusillade",
+        "weapon_classes": ["primary"],
+        "weapon_subtypes": ["rifle", "beam", "launcher"],
+        "firing_modes": [],
+        "incompatible_with": [],
+        "stats": {
+            "slashDamageBonus": 1.20
+        },
+        "multiplicative_when": null
+    },
+    {
+        "name": "Piercing Caliber",
+        "weapon_classes": ["primary"],
+        "weapon_subtypes": ["rifle", "beam", "launcher"],
+        "firing_modes": [],
+        "incompatible_with": [],
+        "stats": {
+            "punctureDamageBonus": 1.20
+        },
+        "multiplicative_when": null
+    },
+    {
+        "name": "Primed Cryo Rounds",
+        "weapon_classes": ["primary"],
+        "weapon_subtypes": ["rifle", "beam", "launcher"],
+        "firing_modes": [],
+        "incompatible_with": [],
+        "stats": {
+            "elementalDamageBonus": 1.65
+        },
+        "multiplicative_when": null
+    },
+    {
+        "name": "Hellfire",
+        "weapon_classes": ["primary"],
+        "weapon_subtypes": ["rifle", "beam", "launcher"],
+        "firing_modes": [],
+        "incompatible_with": [],
+        "stats": {
+            "elementalDamageBonus": 0.90
+        },
+        "multiplicative_when": null
+    },
+    {
+        "name": "High Voltage",
+        "weapon_classes": ["primary"],
+        "weapon_subtypes": ["rifle", "beam", "launcher"],
+        "firing_modes": [],
+        "incompatible_with": [],
+        "stats": {
+            "elementalDamageBonus": 0.60,
+            "statusChanceBonus": 0.60
+        },
+        "multiplicative_when": null
+    },
+    {
+        "name": "Infected Clip",
+        "weapon_classes": ["primary"],
+        "weapon_subtypes": ["rifle", "beam", "launcher"],
+        "firing_modes": [],
+        "incompatible_with": [],
+        "stats": {
+            "elementalDamageBonus": 0.90
+        },
+        "multiplicative_when": null
+    },
+    {
+        "name": "Malignant Force",
+        "weapon_classes": ["primary"],
+        "weapon_subtypes": ["rifle", "beam", "launcher"],
+        "firing_modes": [],
+        "incompatible_with": [],
+        "stats": {
+            "elementalDamageBonus": 0.60,
+            "statusChanceBonus": 0.60
+        },
+        "multiplicative_when": null
+    },
+    {
+        "name": "Rime Rounds",
+        "weapon_classes": ["primary"],
+        "weapon_subtypes": ["rifle", "beam", "launcher"],
+        "firing_modes": [],
+        "incompatible_with": [],
+        "stats": {
+            "elementalDamageBonus": 0.60,
+            "statusChanceBonus": 0.60
+        },
+        "multiplicative_when": null
+    },
+    {
+        "name": "Stormbringer",
+        "weapon_classes": ["primary"],
+        "weapon_subtypes": ["rifle", "beam", "launcher"],
+        "firing_modes": [],
+        "incompatible_with": [],
+        "stats": {
+            "elementalDamageBonus": 0.90
+        },
+        "multiplicative_when": null
+    },
+    {
+        "name": "Thermite Rounds",
+        "weapon_classes": ["primary"],
+        "weapon_subtypes": ["rifle", "beam", "launcher"],
+        "firing_modes": [],
+        "incompatible_with": [],
+        "stats": {
+            "elementalDamageBonus": 0.60,
+            "statusChanceBonus": 0.60
+        },
+        "multiplicative_when": null
+    },
+    {
+        "name": "Wildfire",
+        "weapon_classes": ["primary"],
+        "weapon_subtypes": ["rifle", "beam", "launcher"],
+        "firing_modes": [],
+        "incompatible_with": [],
+        "stats": {
+            "magazineCapacityBonus": 0.20,
+            "elementalDamageBonus": 0.60
+        },
+        "multiplicative_when": null
+    },
+    {
+        "name": "Critical Delay",
+        "weapon_classes": ["primary"],
+        "weapon_subtypes": ["rifle", "beam", "launcher"],
+        "firing_modes": [],
+        "incompatible_with": [],
+        "stats": {
+            "criticalChanceBonus": 2.00,
+            "fireRateBonus": -0.20
+        },
+        "multiplicative_when": null
+    },
+    {
+        "name": "Point Strike",
+        "weapon_classes": ["primary"],
+        "weapon_subtypes": ["rifle", "beam", "launcher"],
+        "firing_modes": [],
+        "incompatible_with": [],
+        "stats": {
+            "criticalChanceBonus": 1.50
+        },
+        "multiplicative_when": null
+    },
+    {
+        "name": "Hammer Shot",
+        "weapon_classes": ["primary"],
+        "weapon_subtypes": ["rifle", "beam", "launcher"],
+        "firing_modes": [],
+        "incompatible_with": [],
+        "stats": {
+            "criticalDamageBonus": 0.60,
+            "statusChanceBonus": 0.80
+        },
+        "multiplicative_when": null
+    },
+    {
+        "name": "Vital Sense",
+        "weapon_classes": ["primary"],
+        "weapon_subtypes": ["rifle", "beam", "launcher"],
+        "firing_modes": [],
+        "incompatible_with": [],
+        "stats": {
+            "criticalDamageBonus": 1.20
+        },
+        "multiplicative_when": null
+    },
+    {
+        "name": "Rifle Aptitude",
+        "weapon_classes": ["primary"],
+        "weapon_subtypes": ["rifle", "beam", "launcher"],
+        "firing_modes": [],
+        "incompatible_with": [],
+        "stats": {
+            "statusChanceBonus": 0.90
+        },
+        "multiplicative_when": null
+    },
+    {
+        "name": "Galvanized Aptitude",
+        "weapon_classes": ["primary"],
+        "weapon_subtypes": ["rifle", "beam", "launcher"],
+        "firing_modes": [],
+        "incompatible_with": [],
+        "stats": {
+            "statusChanceBonus":0.80,
+            "totalDamageBonus": 1.20
+        },
+        "multiplicative_when": true
+    },
+    {
+        "name": "Galvanized Chamber",
+        "weapon_classes": ["primary"],
+        "weapon_subtypes": ["rifle", "beam", "launcher"],
+        "firing_modes": [],
+        "incompatible_with": [],
+        "stats": {
+            "multishotBonus": 2.30
+        },
+        "multiplicative_when": null
+    },
+    {
+        "name": "Vigilante Armamanets",
+        "weapon_classes": ["primary"],
+        "weapon_subtypes": ["rifle", "beam", "launcher"],
+        "firing_modes": [],
+        "incompatible_with": [],
+        "stats": {
+            "multishotBonus": 0.60
+        },
+        "multiplicative_when": null
+    },
+    {
+        "name": "Primed Shred",
+        "weapon_classes": ["primary"],
+        "weapon_subtypes": ["rifle", "beam", "launcher"],
+        "firing_modes": [],
+        "incompatible_with": [],
+        "stats": {
+            "fireRateBonus": 0.55
+        },
+        "multiplicative_when": null
+    },
+    {
+        "name": "Speed Trigger",
+        "weapon_classes": ["primary"],
+        "weapon_subtypes": ["rifle", "beam", "launcher"],
+        "firing_modes": [],
+        "incompatible_with": [],
+        "stats": {
+            "fireRateBonus": 0.60
+        },
+        "multiplicative_when": null
+    },
+    {
+        "name": "Vigilante Fervor",
+        "weapon_classes": ["primary"],
+        "weapon_subtypes": ["rifle", "beam", "launcher"],
+        "firing_modes": [],
+        "incompatible_with": [],
+        "stats": {
+            "fireRateBonus": 0.45
+        },
+        "multiplicative_when": null
+    },
+    {
+        "name": "Vile Acceleration",
+        "weapon_classes": ["primary"],
+        "weapon_subtypes": ["rifle", "beam", "launcher"],
+        "firing_modes": [],
+        "incompatible_with": [],
+        "stats": {
+            "fireRateBonus": 0.90,
+            "totalDamageBonus": -0.15
+        },
+        "multiplicative_when": null
+    },
+    {
+        "name": "Primed Magazine Warp",
+        "weapon_classes": ["primary"],
+        "weapon_subtypes": ["rifle", "beam", "launcher"],
+        "firing_modes": [],
+        "incompatible_with": [],
+        "stats": {
+            "magazineCapacityBonus": 0.55
+        },
+        "multiplicative_when": null
+    },
+    {
+        "name": "Primed Fast Hands",
+        "weapon_classes": ["primary"],
+        "weapon_subtypes": ["rifle", "beam", "launcher"],
+        "firing_modes": [],
+        "incompatible_with": [],
+        "stats": {
+            "reloadSpeedBonus": 0.55
+        },
+        "multiplicative_when": null
+    },
+    {
+        "name": "Primed Serration",
+        "weapon_classes": ["primary"],
+        "weapon_subtypes": ["rifle", "beam", "launcher"],
+        "firing_modes": [],
+        "incompatible_with": [],
+        "stats": {
+            "totalDamageBonus": 0.00
+        },
+        "multiplicative_when": null
+    }
+]

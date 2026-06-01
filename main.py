@@ -1,5 +1,8 @@
 import dearpygui.dearpygui as dpg
 import math
+import json
+import numpy as np
+from itertools import combinations, islice
 
 def calculateFirearm(sender, app_data, user_data):
     fields = user_data
@@ -40,6 +43,13 @@ def calculateFirearm(sender, app_data, user_data):
     totalElementalBonuses = 0
     totalDamageBonuses = 0
     totalMultishotBonuses = 0
+    gunCOBonuses = 1
+    totalFireRateBonuses = 0
+    totalMagazineSizeBonuses = 0
+    totalReloadSpeedBonuses = 0
+    totalStatusChanceBonuses = 0
+    totalCCBonuses = 0
+    totalCDBonuses = 0
     impactBonuses = 0
     punctureBonuses = 0
     slashBonuses = 0
@@ -51,9 +61,9 @@ def calculateFirearm(sender, app_data, user_data):
         (baseSlash / totalBaseIPS) * slashBonuses)
     ) * (1 + totalDamageBonuses) * (baseMulti * (1 + totalMultishotBonuses))
     
-    AVG_NormalShot = totalDamage * (1 + math.floor(moddedCC) * (moddedCD - 1))
+    AVG_NormalShot = totalDamage * (1 + np.floor(moddedCC) * (moddedCD - 1))
     
-    AVG_CritShot = totalDamage * (1 + math.ceil(moddedCC) * (moddedCD - 1))
+    AVG_CritShot = totalDamage * (1 + np.ceil(moddedCC) * (moddedCD - 1))
     
     final_AVG_Shot = totalDamage * (1 + moddedCC * (moddedCD - 1))
     
