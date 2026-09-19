@@ -60,7 +60,7 @@ for apiURL, outputFileName in zip(apiEndpoints, outputFiles):
             # if working on Primaries
             # fix inf fire rate on each attack of the Lanka, replace with number at least 1/10th overflow value (because you can get nearly +500% fire rate from mods, so this way it *cannot* overflow)
             if outputFileName == "wikiData/wikiExportPrimary.json":
-                returnData = returnData.replace("\"fireRate\":inf", "\"fireRate\": 3.4e+37")
+                returnData = returnData.replace("\"FireRate\":inf", "\"FireRate\": 3.4e+37")
 
 
             # if working on Mods
