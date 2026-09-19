@@ -197,57 +197,58 @@ int main()
     int currentModIndex = 0;
     std::string currentWeaponType = currentWeapon["Class"];
 
-    while (currentModIndex < upgradesData["ExportUpgrades"].size())
-    {
-        nlohmann::json currentMod = upgradesData["ExportUpgrades"][currentModIndex];
-        if (currentMod["type"] != "PRIMARY" &&
-        currentMod["type"] != "SECONDARY" &&
-        currentMod["type"] != "MELEE")
-        { // skip mod if not primary/secondary/melee
-            currentModIndex++;
-            continue;
-        }
-        if (currentWeaponType == "LongGuns") // primary weapon
-        {
-            if (currentMod["type"] == "PRIMARY") // primary mod
-            {
+    // while (currentModIndex < upgradesData["ExportUpgrades"].size())
+    // {
+    //     nlohmann::json currentMod = upgradesData["ExportUpgrades"][currentModIndex];
+    //     if (currentMod["type"] != "PRIMARY" &&
+    //     currentMod["type"] != "SECONDARY" &&
+    //     currentMod["type"] != "MELEE")
+    //     { // skip mod if not primary/secondary/melee
+    //         currentModIndex++;
+    //         continue;
+    //     }
+    //     if (currentWeaponType == "LongGuns") // primary weapon
+    //     {
+    //         if (currentMod["type"] == "PRIMARY") // primary mod
+    //         {
 
-            }
-            else
-            { // skip
-                continue;
-            }
-        }
-        else if (currentWeaponType == "Pistols") // secondary weapon
-        {
-            if (currentMod["type"] == "SECONDARY") // secondary mod
-            {
+    //         }
+    //         else
+    //         { // skip
+    //             continue;
+    //         }
+    //     }
+    //     else if (currentWeaponType == "Pistols") // secondary weapon
+    //     {
+    //         if (currentMod["type"] == "SECONDARY") // secondary mod
+    //         {
 
-            }
-            else
-            { // skip
-                continue;
-            }
-        }
-        else if (currentWeaponType == "Melee") // melee weapon
-        {
-            if (currentMod["type"] == "MELEE") // melee mod
-            {
+    //         }
+    //         else
+    //         { // skip
+    //             continue;
+    //         }
+    //     }
+    //     else if (currentWeaponType == "Melee") // melee weapon
+    //     {
+    //         if (currentMod["type"] == "MELEE") // melee mod
+    //         {
 
-            }
-            else
-            { // skip
-                continue;
-            }
-        }
-    }
+    //         }
+    //         else
+    //         { // skip
+    //             continue;
+    //         }
+    //     }
+    // }
     
     int attackIndex = 1;
     while (attackIndex <= currentWeapon["Attacks"].size())
     {
         // TODO: figure out how to make this be while there are still mod combinations left
         // nested for loops, each starting at 1 higher index, each ending 1 index earlier from the end of valid mods vector
-        while (true)
+        // then also make a loop that tries each permutation of elemental mods to try their configs
+        for (int i = 0; i <= 1; i++)
         {
             nlohmann::json moddedWeapon = currentWeapon;
             std::vector<std::string> currentModConfig = {};
