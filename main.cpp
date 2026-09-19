@@ -137,12 +137,13 @@ std::tuple<float, float, float> calculateDPSValues(nlohmann::json moddedWeapon, 
 int main()
 {
     std::cout << "I at least ran the main function\n";
-    json weaponData = loadJsonFile("ExportWeapons_en.json");
-    json wikiWeaponData = loadJsonFile("warframeWikiWeapons.json");
+    json wikiPrimaryWeaponData = loadJsonFile("wikiData/wikiExportPrimary.json");
+    json wikiSecondaryWeaponData = loadJsonFile("wikiData/wikiExportSecondary.json");
+    json wikiMeleeWeaponData = loadJsonFile("wikiData/wikiExportMelee.json");
     json warframeData = loadJsonFile("ExportWarframes_en.json");
     json SentinelsData = loadJsonFile("ExportSentinels_en.json");
-    json upgradesData = loadJsonFile("ExportUpgrades_en.json");
-    json relicArcaneData = loadJsonFile("ExportRelicArcane_en.json");
+    json wikiModsData = loadJsonFile("wikiData/wikiExportMods.json");
+    json wikiArcaneData = loadJsonFile("wikiData/wikiExportArcanes.json");
     std::cout << "I at least loaded the data!\n";
 
     // retrieve weapon (eventually this will loop to do this for every weapon, or for a specified weapon)
@@ -166,12 +167,25 @@ int main()
             weaponGeneralClassChosen = true;
         }
     }
+    json selectedWeaponType;
+    if (weaponGeneralClass == "Primary") {
+        selectedWeaponType = wikiPrimaryWeaponData;
+    } else if (weaponGeneralClass == "Secondary") {
+        selectedWeaponType = wikiSecondaryWeaponData;
+    } else if (weaponGeneralClass == "Melee") {
+        selectedWeaponType = wikiMeleeWeaponData;
+    }
+
+    // clear newline from input
+    std::cin.ignore();
+
     bool foundWeaponToOptimize = false;
     while (!foundWeaponToOptimize)
     {
-        std::cin >> weaponName;
+        // change to getline so it reads until newline instead of until a whitespace character
+        std::getline(std::cin, weaponName);
         std::cout << "Trying to optimize " << weaponName << std::endl;
-        if (!wikiWeaponData[weaponGeneralClass + "Weapons"].contains(weaponName))
+        if (!selectedWeaponType.contains(weaponName))
         {
             std::cout << "Couldn't find a weapon called " << weaponName << ", please double check spelling and capitalization and try again" << std::endl;
         }
@@ -182,7 +196,7 @@ int main()
     }
 
 
-    nlohmann::json currentWeapon = wikiWeaponData[weaponGeneralClass + "Weapons"][weaponName];
+    nlohmann::json currentWeapon = selectedWeaponType[weaponName];
 
     float averageShot = 0;
     float averageBurstDPS = 0;

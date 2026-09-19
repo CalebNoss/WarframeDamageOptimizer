@@ -1,5 +1,7 @@
 import requests
+import json
 from pathlib import Path
+import re
 
 
 # URL for Warframe Wiki API
@@ -49,10 +51,28 @@ for apiURL, outputFileName in zip(apiEndpoints, outputFiles):
 
         # if successful
         if response.status_code == 200:
-            jsonString = response.text
+            responseData = json.loads(response.text)
+            returnData = responseData["return"]
+
+
+            
+
+            # if working on Primaries
+            # fix inf fire rate on each attack of the Lanka, replace with number at least 1/10th overflow value (because you can get nearly +500% fire rate from mods, so this way it *cannot* overflow)
+            if outputFileName == "wikiData/wikiExportPrimary.json":
+                returnData = returnData.replace("\"fireRate\":inf", "\"fireRate\": 3.4e+37")
+
+
+            # if working on Mods
+            # fix invalid character in place of 'o' in 'Hollars' in InstantSecure mod
+            if outputFileName == "wikiData/wikiExportMods.json":
+                returnData = re.sub("H.llars", "Hollars", returnData)
+
+
+
 
             with open(outputFile, "w") as file:
-                file.write(jsonString)
+                file.write(returnData)
         else:
             print(f"Error fetching data from {apiURL}, the status code is: {response.status_code}")
     except requests.exceptions.RequestException as e:
