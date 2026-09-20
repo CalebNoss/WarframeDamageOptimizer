@@ -108,3 +108,8 @@ Work Stages
 // Burst and Sustained will use averaged over time amount of each elements effects on the enemy (ie: if you have 2 stacks on an enemy half the time and 3 stacks the other half, the value of 2.5 stacks will be calculated with, although not possible it should be more accurate over time)
 
 // Sustained will take status effect into damage calcs, and count all status effect damage & heat armor strip, using the averaged dps and effects explained above
+
+
+
+
+// choose mods based on

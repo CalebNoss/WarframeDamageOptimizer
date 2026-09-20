@@ -8,8 +8,8 @@
       "args": [],
       "stopAtEntry": false,
       "externalConsole": true,
-      "cwd": "c:/Users/Caleb/Documents/C++ Projects/WarframeDamageOptimizer",
-      "program": "c:/Users/Caleb/Documents/C++ Projects/WarframeDamageOptimizer/build/Debug/outDebug",
+      "cwd": "c:/Users/Caleb/Documents/C++ Projects/WarframeDamageOptimizer/Classes",
+      "program": "c:/Users/Caleb/Documents/C++ Projects/WarframeDamageOptimizer/Classes/build/Debug/outDebug",
       "MIMode": "gdb",
       "miDebuggerPath": "gdb",
       "setupCommands": [
