@@ -1,10 +1,12 @@
 #include "nlohmann/json.hpp"
 #include "Classes/Enemy.hpp"
+#include "Classes/weaponMod.hpp"
 #include <fstream>
 #include <iostream>
 #include <format>
 #include <string>
 #include <cmath>
+#include <algorithm>
 // json loading thanks to nlohmann, further info in nlohmann/json.hpp
 
 using json = nlohmann::json;
@@ -12,11 +14,11 @@ using json = nlohmann::json;
 
 json loadJsonFile(std::string fileName)
 {
-    std::cout << ("Loading " + fileName + "\n");
+    // std::cout << ("Loading " + fileName + "\n");
 
     std::ifstream jsonFile(fileName);
     
-    std::cout << "Parsing data\n";
+    // std::cout << "Parsing data\n";
 
     json parsedJson;
     try {
@@ -27,14 +29,14 @@ json loadJsonFile(std::string fileName)
     {
         std::cerr << "Error parsing " << fileName << "   :   " << e.what() << std::endl;
     }
-    std::cout << "Parsed without errors (at least I hope)\n";
+    // std::cout << "Parsed without errors (at least I hope)\n";
     return parsedJson;
 }
 
 
 
 
-    // TODO: implement changing this based on chosen stance for melee weapons, when melee weapons are implemented
+    // TODO: implement changing this based on chosen stance for melee weapons, when melee weapons are fully implemented
     double tempBaseComboLength = 3;
 
 
@@ -192,12 +194,87 @@ std::tuple<double, double, double> calculateDPSValues(nlohmann::json moddedWeapo
     {
         // Going to have to add a slot for combo mods to choose from for the melee weapons, then i need to update this
         // TODO: update this calculation once combo mod can be chosen
-        averageSustainedDPS = (averageShot * static_cast<double>(currAttack["FireRate"]) / tempBaseComboLength);
+        averageSustainedDPS = (averageShot * static_cast<double>(currAttack["FireRate"]) / static_cast<double>(moddedWeapon["ComboDur"]));
     }
     return { averageShot, averageBurstDPS, averageSustainedDPS };
 }
 
 
+
+
+
+struct weaponType {
+    int weaponTypeID;
+    std::string name;
+    int parentTypeID;
+};
+
+// returns vector of strings of all compatible mod types
+std::vector<std::string> getValidModTypes(std::string& weaponTypeName, std::vector<weaponType> weaponTypeTree)
+{
+    int weaponTypeID = -1;
+    for (weaponType currWeaponType : weaponTypeTree)
+    {
+        if (currWeaponType.name == weaponTypeName)
+        {
+            weaponTypeID = currWeaponType.weaponTypeID;
+        }
+    }
+
+    std::vector<std::string> validModTypes = {};
+    int parentWeaponTypeID = 9999;
+    while (parentWeaponTypeID != -1)
+    {
+        parentWeaponTypeID = weaponTypeTree[weaponTypeID - 1].parentTypeID;
+        if (weaponTypeTree[weaponTypeID - 1].name == "Assault Saw" ||
+        weaponTypeTree[weaponTypeID - 1].name == "Bayonet" ||
+        weaponTypeTree[weaponTypeID - 1].name == "Blade and Whip" ||
+        weaponTypeTree[weaponTypeID - 1].name == "Claws" ||
+        weaponTypeTree[weaponTypeID - 1].name == "Dagger" ||
+        weaponTypeTree[weaponTypeID - 1].name == "Dual Nikanas" ||
+        weaponTypeTree[weaponTypeID - 1].name == "Dual Swords" ||
+        weaponTypeTree[weaponTypeID - 1].name == "Fist" ||
+        weaponTypeTree[weaponTypeID - 1].name == "Gunblade" ||
+        weaponTypeTree[weaponTypeID - 1].name == "Hammer" ||
+        weaponTypeTree[weaponTypeID - 1].name == "Heavy Blade" ||
+        weaponTypeTree[weaponTypeID - 1].name == "Heavy Scythe" ||
+        weaponTypeTree[weaponTypeID - 1].name == "Machete" ||
+        weaponTypeTree[weaponTypeID - 1].name == "Nikana" ||
+        weaponTypeTree[weaponTypeID - 1].name == "Nunchaku" ||
+        weaponTypeTree[weaponTypeID - 1].name == "Rapier" ||
+        weaponTypeTree[weaponTypeID - 1].name == "Scythe" ||
+        weaponTypeTree[weaponTypeID - 1].name == "Sparring" ||
+        weaponTypeTree[weaponTypeID - 1].name == "Staff" ||
+        weaponTypeTree[weaponTypeID - 1].name == "Sword" ||
+        weaponTypeTree[weaponTypeID - 1].name == "Sword and Shield" ||
+        weaponTypeTree[weaponTypeID - 1].name == "Two-Handed Nikana" ||
+        weaponTypeTree[weaponTypeID - 1].name == "Tonfa" ||
+        weaponTypeTree[weaponTypeID - 1].name == "Warfan" ||
+        weaponTypeTree[weaponTypeID - 1].name == "Whip")
+        {
+            continue;   //  only used for stance mods
+        }
+        else if (weaponTypeTree[weaponTypeID - 1].name == "Glaive")
+        {
+            validModTypes.push_back("Thrown Melee");
+        }
+        else if (weaponTypeTree[weaponTypeID - 1].name == "Polearm")
+        {
+            validModTypes.push_back("Polearms");
+        }
+        else if (weaponTypeTree[weaponTypeID - 1].name == "Sniper Rifle")
+        {
+            validModTypes.push_back("Sniper");
+        }
+        else
+        {
+            validModTypes.push_back(weaponTypeTree[weaponTypeID - 1].name);
+        }
+        weaponTypeID = parentWeaponTypeID;
+    }
+
+    return validModTypes;
+}
 
 
 
@@ -214,9 +291,9 @@ int main()
     json wikiModsData = loadJsonFile("wikiData/wikiExportMods.json");
     json wikiArcaneData = loadJsonFile("wikiData/wikiExportArcanes.json");
     std::cout << "I at least loaded the data!\n";
+    
 
     // retrieve weapon (eventually this will loop to do this for every weapon, or for a specified weapon)
-
 
     
     // ---------------------------------------- USER SETTINGS ----------------------------------------
@@ -237,11 +314,68 @@ int main()
         }
     }
     json selectedWeaponType;
+    std::vector<weaponType> weaponTypeTree;
     if (weaponGeneralClass == "Primary") {
+        // Define weapon type structure
+        weaponTypeTree = {
+            {1, "Primary", -1},
+            {2, "Rifle", 1},
+            {3, "Shotgun", 1},
+            {4, "Assault Rifle", 2},
+            {5, "Bow", 2},
+            {6, "Sniper Rifle", 2},   //  Mods use "Sniper", weapons use "Sniper Rifle"
+            {7, "Launcher", 4},
+            {8, "Speargun", 7},
+            {9, "Crossbow", 5}
+        };
+
         selectedWeaponType = wikiPrimaryWeaponData;
     } else if (weaponGeneralClass == "Secondary") {
+        // Define weapon type structure
+        weaponTypeTree = {
+            {1, "Secondary", -1},
+            {2, "Pistol", 1},
+            {3, "Thrown", 1},
+            {4, "Tome", 1},
+            {5, "Dual Pistols", 2},
+            {6, "Dual Shotguns", 2},
+            {7, "Shotgun Sidearm", 2},
+            {8, "Crossbow", 2}
+        };
         selectedWeaponType = wikiSecondaryWeaponData;
     } else if (weaponGeneralClass == "Melee") {
+        // Define weapon type structure
+        weaponTypeTree = {
+            {1, "Melee", -1},
+            {2, "Assault Saw", 1},
+            {3, "Bayonet", 1},
+            {4, "Blade and Whip", 1},
+            {5, "Claws", 1},
+            {6, "Dagger", 1},
+            {7, "Dual Daggers", 1},
+            {8, "Dual Nikanas", 1},
+            {9, "Dual Swords", 1},
+            {10, "Fist", 1},
+            {11, "Glaive", 1},
+            {12, "Gunblade", 1},
+            {13, "Hammer", 1},
+            {14, "Heavy Blade", 1},
+            {15, "Heavy Scythe", 1},
+            {16, "Machete", 1},
+            {17, "Nikana", 1},
+            {18, "Nunchaku", 1},
+            {19, "Polearm", 1},
+            {20, "Rapier", 1},
+            {21, "Scythe", 1},
+            {22, "Sparring", 1},
+            {23, "Staff", 1},
+            {24, "Sword", 1},
+            {25, "Sword and Shield", 1},
+            {26, "Two-Handed Nikana", 1},
+            {27, "Tonfa", 1},
+            {28, "Warfan", 1},
+            {29, "Whip", 1}
+        };
         selectedWeaponType = wikiMeleeWeaponData;
     }
 
@@ -280,51 +414,52 @@ int main()
     int currentModIndex = 0;
     std::string currentWeaponType = currentWeapon["Class"];
 
-    // while (currentModIndex < upgradesData["ExportUpgrades"].size())
-    // {
-    //     nlohmann::json currentMod = upgradesData["ExportUpgrades"][currentModIndex];
-    //     if (currentMod["type"] != "PRIMARY" &&
-    //     currentMod["type"] != "SECONDARY" &&
-    //     currentMod["type"] != "MELEE")
-    //     { // skip mod if not primary/secondary/melee
-    //         currentModIndex++;
-    //         continue;
-    //     }
-    //     if (currentWeaponType == "LongGuns") // primary weapon
-    //     {
-    //         if (currentMod["type"] == "PRIMARY") // primary mod
-    //         {
+    /// Skip any mods with IsFlawed that is set to true
+    /// If any entry in "Incompatible" starts with "Primed" there is a prime variant, so ignore the base    -   done in loading mods, not needed in this file
 
-    //         }
-    //         else
-    //         { // skip
-    //             continue;
-    //         }
-    //     }
-    //     else if (currentWeaponType == "Pistols") // secondary weapon
-    //     {
-    //         if (currentMod["type"] == "SECONDARY") // secondary mod
-    //         {
 
-    //         }
-    //         else
-    //         { // skip
-    //             continue;
-    //         }
-    //     }
-    //     else if (currentWeaponType == "Melee") // melee weapon
-    //     {
-    //         if (currentMod["type"] == "MELEE") // melee mod
-    //         {
+    std::vector<weaponMod> validMods = {};
+    for (auto& [modName, modData] : wikiModsData["Mods"].items())
+    {
+        std::vector<std::string> validModTypes = getValidModTypes(currentWeaponType, weaponTypeTree);
 
-    //         }
-    //         else
-    //         { // skip
-    //             continue;
-    //         }
-    //     }
-    // }
+        // prune flawed mods here too
+        if (modData.value("IsFlawed", false))
+        {   //  skp this mod, is flawed
+            continue;
+        }
+        else if (std::find(validModTypes.begin(), validModTypes.end(), modData["Type"]) != validModTypes.end()) // melee mod
+        {
+            // push entries or default to empty strings/vectors of strings if that field doesn't exist for this mod
+            validMods.push_back(weaponMod(modData.value("Name", ""), modData.value("Type", ""), modData.value("Description", ""), modData.value("Set", ""), modData.value("Class", ""), modData.value("IncompatibilityTags", std::vector<std::string>{}), modData.value("Incompatible", std::vector<std::string>{}), modData.value("UpgradeTypes", std::vector<std::string>{})));
+            //  std::cout << "Adding " << modData.value("Name", " ") << modData.contains("Description") << std::endl;
+        }
+        else
+        { // skip this mod, not valid
+            continue;
+        }
+    }
+
+    // prune extra mods
+    for (auto currMod = validMods.begin(); currMod != validMods.end();)
+    {   // iterate from start until end
+        if (currMod->getPruneThis() == true)
+        {   //  if mod should be pruned, erase it, iterator auto skips to the next entry
+            currMod = validMods.erase(currMod);
+            //  std::cout << "Pruning " << currMod->name << std::endl;
+        }
+        else
+        {   //  if not pruned then iterate to next valid mod
+            currMod++;
+        }
+    }
     
+
+    // for (weaponMod currMod : validMods)
+    // {
+    //     std::cout << currMod.name << " is compatible with " << currentWeapon["Name"]  << " and I am accounting for it" << std::endl;
+    // }
+
     int attackIndex = 1;
     while (attackIndex <= currentWeapon["Attacks"].size())
     {
@@ -352,15 +487,15 @@ int main()
             auto [tempAverageShot, tempAverageBurstDPS, tempAverageSustainedDPS] = calculateDPSValues(moddedWeapon, (attackIndex - 1), weaponGeneralClass, currEnemy);
             if (tempAverageShot > averageShot)
             {
-                averageShot = tempAverageShot; // save mod config too
+                averageShot = tempAverageShot; // TODO: save mod config too
             }
             if (tempAverageBurstDPS > averageBurstDPS)
             {
-                averageBurstDPS = tempAverageBurstDPS; // save mod config too
+                averageBurstDPS = tempAverageBurstDPS; // TODO: save mod config too
             }
             if (tempAverageSustainedDPS > averageSustainedDPS)
             {
-                averageSustainedDPS = tempAverageSustainedDPS; // save mod config too
+                averageSustainedDPS = tempAverageSustainedDPS; // TODO: save mod config too
             }
             std::cout << "For the: " << currentWeapon["Name"] << "'s attack number " << attackIndex << " the stats are as follows: Average shot: " << tempAverageShot << ", Average burst DPS: " << tempAverageBurstDPS << ", Average Sustained DPS: " << tempAverageSustainedDPS << std::endl;
         }

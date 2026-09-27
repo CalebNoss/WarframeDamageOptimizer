@@ -112,4 +112,4 @@ Work Stages
 
 
 
-// choose mods based on
+// for now this ignores augment mods, until I can figure out fixing based on the type to check if it can be used on this
