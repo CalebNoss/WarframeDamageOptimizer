@@ -14,14 +14,14 @@ class Enemy
         double addedCritDamage = 0.0f; // added crit damage from cold stacks
         double multiplierToHealthDamage = 0.0f; // multiplier to health damage from viral stacks
         double addedStatusVulnerability = 0.0f; // added status chance from tau stacks
-    // I was seeing if I need to track anything else, otherwise I need to make getters and setters, as well as something to auto calculate currentArmor and return it
+
         std::unordered_map<std::string, int> statusCaps = {
             {"Impact", 5},
             {"Puncture", 5},
             {"Slash", 1061109567},
             {"Heat", 1061109567},
             {"Cold", 10},
-            {"Electric", 1061109567},
+            {"Electricity", 1061109567},
             {"Toxin", 1061109567},
             {"Blast", 10},
             {"Corrosive", 10},
@@ -32,13 +32,13 @@ class Enemy
             {"Tau", 10}
         };
 
-        std::unordered_map<std::string, int> statusDurations = {
+        std::unordered_map<std::string, double> statusDurations = {
             {"Impact", 6},
             {"Puncture", 10},
             {"Slash", 6},
             {"Heat", 6},
             {"Cold", 6},
-            {"Electric", 6},
+            {"Electricity", 6},
             {"Toxin", 6},
             {"Blast", 1.5},
             {"Corrosive", 8},
@@ -55,7 +55,7 @@ class Enemy
             {"Slash", 0},
             {"Heat", 0},
             {"Cold", 0},
-            {"Electric", 0},
+            {"Electricity", 0},
             {"Toxin", 0},
             {"Blast", 0},
             {"Corrosive", 0},
@@ -115,11 +115,11 @@ class Enemy
 
         // general getters
         double getHeatInheritDamage() const { return heatInheritDamage; }
-        std::unordered_map<std::string, int> getStatusCaps() const { return statusCaps; }
-        std::unordered_map<std::string, int> getStatusDurations() const { return statusDurations; }
-        std::unordered_map<std::string, double> getStatusCounts() const { return statusCounts; }
+        const std::unordered_map<std::string, int>& getStatusCaps() const { return statusCaps; }
+        const std::unordered_map<std::string, double>& getStatusDurations() const { return statusDurations; }
+        std::unordered_map<std::string, double>* getStatusCounts() { return &statusCounts; }
 
         // general setters
         void setHeatInheritDamage(double newDamage) { heatInheritDamage = newDamage; }
-        void setStatusCounts(std::unordered_map<std::string, double> newStatusCounts) { statusCounts = newStatusCounts;}
+        void setStatusCounts(const std::unordered_map<std::string, double>& newStatusCounts) { statusCounts = newStatusCounts;}
 };

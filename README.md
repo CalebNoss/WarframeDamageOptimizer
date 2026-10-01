@@ -27,19 +27,16 @@ Why: I made this and I don't like changing builds for different factions, so, so
 
 Work Stages
 1. Load All Data // ---------------------------------------------------- DONE
+    1a. Parse weapons into Weapon class, and adjust DPS calc to match // 
 
-// For the start, only work with the first weapon
-// I have to include order of mods to take into account for status effect types & dps later on
-2. Filter to only include compatible mods
-    2a. fix charge time data
+2. Filter to only include compatible mods   //  ------------------------ DONE
 
 3. Find best mods for raw damage
-
-    3a. Find way to turn written description into stats that can be used
+    3a. Find way to turn written description into stats that can be used    // I wrote an entire manual parser for maximum control...   ------------------------------------ DONE
 
 4. Account for Status DOT
 
-5. Account for Satus Effect Debuffs
+5. Account for Satus Effect Debuffs //  -------------------------------- DONE
 
 6. Account for Arcanes
 
@@ -113,3 +110,8 @@ Work Stages
 
 
 // for now this ignores augment mods, until I can figure out fixing based on the type to check if it can be used on this
+
+
+
+// TODO List:
+1. 

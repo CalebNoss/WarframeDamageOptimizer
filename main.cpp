@@ -1,6 +1,8 @@
 #include "nlohmann/json.hpp"
 #include "Classes/Enemy.hpp"
 #include "Classes/weaponMod.hpp"
+#include "Classes/weaponModConfig.hpp"
+#include "Classes/Weapon.hpp"
 #include <fstream>
 #include <iostream>
 #include <format>
@@ -36,50 +38,51 @@ json loadJsonFile(std::string fileName)
 
 
 
-    // TODO: implement changing this based on chosen stance for melee weapons, when melee weapons are fully implemented
-    double tempBaseComboLength = 3;
 
 
 
-
-
-std::tuple<double, double, double> calculateDPSValues(nlohmann::json moddedWeapon, int attackIndex, std::string weaponType, Enemy currEnemy)
+std::tuple<double, double, double> calculateDPSValues(Weapon& moddedWeapon, attackData& currAttack, std::string& weaponType, Enemy& currEnemy)
 {
     // ---------------------------------------- CALCULATE DAMAGE ----------------------------------------
-    // std::cout << "I at least got here\n";
+    // std::cout << "Starting damage calcs\n";
 
     // Calculate totalDamage
     double totalDamage = 0;
     double multishotValue = 0;
 
-    // std::cout << "I got here!\n";
 
-    nlohmann::json currAttack = moddedWeapon["Attacks"][attackIndex];
-    for (const auto& damageType : (currAttack["Damage"].items()))
+    for (const auto& damageType : currAttack.damage)
     {
-        totalDamage += damageType.value().get<double>();
+        totalDamage += damageType.second;
+        // if (damageType.second != 0)
+        // {
+        //     std::cout << "The " << damageType.first << " damage is: " << damageType.second << std::endl;
+        // }
     }
-    if (currAttack.contains("Multishot"))
-    {
-        multishotValue = currAttack["Multishot"];
-    } else
+    if (currAttack.multishot == 0)
     {
         multishotValue = 1;
     }
+    else
+    {
+        multishotValue = currAttack.multishot;
+    }
 
-    // std::cout << "I got here too!\n";
+    // std::cout<< "The total damage is: " << totalDamage << std::endl;
+
+    // std::cout << "I summed total damage and got multishot value!\n";
 
 
     std::string triggerType = "";
     if (weaponType == "Primary" || weaponType == "Secondary")
     {
-        if (currAttack.contains("Trigger")) // use particular attacks trigger value if it exists, else use weapons trigger value
+        if (currAttack.triggerType != "") // use particular attacks trigger value if it exists, else use weapons trigger value
         {
-            triggerType = currAttack["Trigger"];
+            triggerType = currAttack.triggerType;
         }
-        else if (moddedWeapon.contains("Trigger"))
+        else if (moddedWeapon.triggerType != "")
         {
-            triggerType = moddedWeapon["Trigger"];
+            triggerType = moddedWeapon.triggerType;
         }
         else
         {
@@ -89,31 +92,35 @@ std::tuple<double, double, double> calculateDPSValues(nlohmann::json moddedWeapo
 
     double effectiveFireRate = 0;
 
+    // std::cout << "I got trigger types!\n";
+
+
     if (weaponType == "Melee" ||
     triggerType == "Auto" ||
     triggerType == "Semi-Auto" ||
     triggerType == "Duplex" ||
     triggerType == "Held")
     {
-        effectiveFireRate = currAttack["FireRate"];
+        effectiveFireRate = currAttack.fireRate;
     }
     else if (triggerType == "Charge")
     {
-        effectiveFireRate = (1 / (static_cast<double>(currAttack["ChargeTime"]) + (1 / static_cast<double>(currAttack["FireRate"]))));
+        effectiveFireRate = (1 / (moddedWeapon.reloadRate + (1 / currAttack.fireRate)));
     }
     else if (triggerType == "Burst" || triggerType == "Auto Burst")
     {
-        effectiveFireRate = (static_cast<double>(currAttack["BurstCount"]) / ((1 / static_cast<double>(currAttack["FireRate"])) + ((static_cast<double>(currAttack["BurstCount"]) - 1) * static_cast<double>(currAttack["BurstDelay"]))));
+        effectiveFireRate = ((currAttack.burstCount) / ((1 / currAttack.fireRate) + ((currAttack.burstCount - 1) * currAttack.burstDelay)));
     }
     else
     {
         std::cout << "ABORT! I couldn't find the trigger type for this attack, or at least it isn't Auto, Semi-Auto, Duplex, Held, Charge, Burst, or Auto Burst" << std::endl;
     }
     
-        std::cout << "I got here!\n";
+    // std::cout << "I calculated the fire rate!\n";
 
     // Calculate status amounts on enemy
-    for (const auto& damageType : (currAttack["Damage"].items()))
+    std::unordered_map<std::string, double>* currStatusCounts = currEnemy.getStatusCounts();
+    for (const auto& damageType : currAttack.damage)
     {
         // use each types damage as a proportion of totalDamage to get damage distribution
         // multiply by status chance to get amount applied per hit
@@ -123,47 +130,53 @@ std::tuple<double, double, double> calculateDPSValues(nlohmann::json moddedWeapo
         // cap at max amount
         // add to enemy
         // update damage calculations ot take into account the CC, CD, etc. buffs
-        double proportionOfTotalDamage = damageType.value().get<double>() / totalDamage;
-        double statusAppliedPerHit = proportionOfTotalDamage * static_cast<double>(currAttack["StatusChance"]);
+        double proportionOfTotalDamage = damageType.second / totalDamage;
+        double statusAppliedPerHit = proportionOfTotalDamage * currAttack.statusChance;
         double statusAppliedPerShot = statusAppliedPerHit * multishotValue;
         double statusAppliedPerSecond = statusAppliedPerShot * effectiveFireRate;
 
+        // std::cout << "I got here too!\n";
+
         // multiply by status duration
-        double averageStatusCount = statusAppliedPerSecond * (currEnemy.getStatusDurations())[damageType.key()];
+        double averageStatusCount = statusAppliedPerSecond * ((currEnemy.getStatusDurations()).at(damageType.first) * moddedWeapon.statusDuration);
         // round down if above cap
         double finalStatusCount = 0;
-        if (averageStatusCount >= (currEnemy.getStatusCaps())[damageType.key()])
+        if (averageStatusCount >= (currEnemy.getStatusCaps()).at(damageType.first))
         {
-            finalStatusCount = (currEnemy.getStatusCaps())[damageType.key()];
+            finalStatusCount = (currEnemy.getStatusCaps()).at(damageType.first);
         } else
         {
             finalStatusCount = averageStatusCount;
         }
 
-        std::unordered_map<std::string, double> currStatusCounts = currEnemy.getStatusCounts();
-        currStatusCounts[damageType.key()] = finalStatusCount;
-        currEnemy.setStatusCounts(currStatusCounts);
+        (*currStatusCounts)[damageType.first] = finalStatusCount;
     }
 
-    double normalShot = totalDamage * (1 + (std::floor(static_cast<double>(currAttack["CritChance"]) + currEnemy.getAddedCritChance()) * (static_cast<double>(currAttack["CritMultiplier"]) - 1.0f + currEnemy.getAddedCritDamage())));
-    double criticalShot = totalDamage * (1 + (std::ceil(static_cast<double>(currAttack["CritChance"]) + currEnemy.getAddedCritChance()) * (static_cast<double>(currAttack["CritMultiplier"]) - 1.0f + currEnemy.getAddedCritDamage())));
-    double averageShot = totalDamage * ((1 + static_cast<double>(currAttack["CritChance"]) + currEnemy.getAddedCritChance()) * (static_cast<double>(currAttack["CritMultiplier"]) - 1 + currEnemy.getAddedCritDamage()));
+    double statusAndModdedCritChance = ((currAttack.critChance) + currEnemy.getAddedCritChance());
+    double statusAndModdedCritMultiplier = (currAttack.critMultiplier - 1.0f + currEnemy.getAddedCritDamage());
 
+    double normalShot = totalDamage * (1 + (std::floor(statusAndModdedCritChance) * (statusAndModdedCritMultiplier)));
+    double criticalShot = totalDamage * (1 + (std::ceil(statusAndModdedCritChance) * (statusAndModdedCritMultiplier)));
+    double averageShot = totalDamage * ((1 + (statusAndModdedCritChance) * (statusAndModdedCritMultiplier)));
+
+    double averageSingleShot = (totalDamage * (1 + ((currAttack.critChance) * (currAttack.critMultiplier - 1))));
+        // std::cout << "I got here three!\n";
+    // std::cout << "totalDamage is: " << totalDamage << " crit chance is: " << currAttack.critChance << " crit damage is: " << currAttack.critMultiplier << " and avg single shot dmg is: " << averageSingleShot << std::endl;
 
 
     // Starting Values
     double averageBurstDPS = 0;
     double numberOfShotsPerMag = 0;
     double averageSustainedDPS = 0;
-    double ammoCostPerShot = 0;
+    double ammoCostPerShot = 1;
     double percentOfTimeShooting = 0;
 
     // Gun DPS
     if (weaponType == "Primary" || weaponType == "Secondary")
     {
-        if (currAttack.contains("AmmoCost"))
+        if (currAttack.ammoCost != 0)
         {
-            ammoCostPerShot = currAttack["AmmoCost"];
+            ammoCostPerShot = currAttack.ammoCost;
         }
 
         // avg burst dps (held but no reloads)
@@ -171,21 +184,25 @@ std::tuple<double, double, double> calculateDPSValues(nlohmann::json moddedWeapo
         averageBurstDPS = averageShot * effectiveFireRate;
 
         // used to calculate time reloading
-        if (moddedWeapon.contains("Magazine"))
+        if (moddedWeapon.magazineCapacity != 0)
         {
-            numberOfShotsPerMag = static_cast<double>(moddedWeapon["Magazine"]) / ammoCostPerShot;
-            percentOfTimeShooting = numberOfShotsPerMag / ((effectiveFireRate * static_cast<double>(moddedWeapon["Reload"])) + numberOfShotsPerMag);
+            numberOfShotsPerMag = moddedWeapon.magazineCapacity / ammoCostPerShot;
+            percentOfTimeShooting = numberOfShotsPerMag / ((effectiveFireRate * moddedWeapon.reloadSpeed) + numberOfShotsPerMag);
         }
         else
         {
             // infinite magazine, so always shooting.
             numberOfShotsPerMag = INFINITY;
             percentOfTimeShooting = 1;
-
         }
 
         // percent of time shooting vs reloading
-
+        // std::cout << "Percent of time shooting: " << percentOfTimeShooting << std::endl;
+        // std::cout << "Number of shots per mag: " << numberOfShotsPerMag << std::endl;
+        // std::cout << "Effective fire rate: " << effectiveFireRate << std::endl;
+        // std::cout << "Ammo cost per shot: " << ammoCostPerShot << std::endl;
+        // std::cout << "Magazine Capacity: " << moddedWeapon.magazineCapacity << std::endl;
+        // std::cout << "Reload speed: " << moddedWeapon.reloadSpeed << std::endl;
         // Avg sustained dps
         averageSustainedDPS = averageBurstDPS * percentOfTimeShooting;
     }
@@ -194,9 +211,9 @@ std::tuple<double, double, double> calculateDPSValues(nlohmann::json moddedWeapo
     {
         // Going to have to add a slot for combo mods to choose from for the melee weapons, then i need to update this
         // TODO: update this calculation once combo mod can be chosen
-        averageSustainedDPS = (averageShot * static_cast<double>(currAttack["FireRate"]) / static_cast<double>(moddedWeapon["ComboDur"]));
+        averageSustainedDPS = (averageShot * currAttack.fireRate / moddedWeapon.comboDuration);
     }
-    return { averageShot, averageBurstDPS, averageSustainedDPS };
+    return { averageSingleShot, averageBurstDPS, averageSustainedDPS };
 }
 
 
@@ -210,7 +227,7 @@ struct weaponType {
 };
 
 // returns vector of strings of all compatible mod types
-std::vector<std::string> getValidModTypes(std::string& weaponTypeName, std::vector<weaponType> weaponTypeTree)
+std::vector<std::string> getValidModTypes(std::string& weaponTypeName, std::vector<weaponType>& weaponTypeTree)
 {
     int weaponTypeID = -1;
     for (weaponType currWeaponType : weaponTypeTree)
@@ -282,7 +299,7 @@ std::vector<std::string> getValidModTypes(std::string& weaponTypeName, std::vect
 // main function
 int main()
 {
-    std::cout << "I at least ran the main function\n";
+    // std::cout << "I at least ran the main function\n";
     json wikiPrimaryWeaponData = loadJsonFile("wikiData/wikiExportPrimary.json");
     json wikiSecondaryWeaponData = loadJsonFile("wikiData/wikiExportSecondary.json");
     json wikiMeleeWeaponData = loadJsonFile("wikiData/wikiExportMelee.json");
@@ -312,6 +329,10 @@ int main()
             std::cout << "Great! Which " << weaponGeneralClass << " do you want to optimize? Be sure to capitalize each part of it's name, like 'Dual Coda Torxica'\n";
             weaponGeneralClassChosen = true;
         }
+        else
+        {
+            std::cout << "Invalid! Please check capitalization and enter again" << std::endl;
+        }
     }
     json selectedWeaponType;
     std::vector<weaponType> weaponTypeTree;
@@ -328,7 +349,6 @@ int main()
             {8, "Speargun", 7},
             {9, "Crossbow", 5}
         };
-
         selectedWeaponType = wikiPrimaryWeaponData;
     } else if (weaponGeneralClass == "Secondary") {
         // Define weapon type structure
@@ -399,20 +419,19 @@ int main()
     }
 
 
-    nlohmann::json currentWeapon = selectedWeaponType[weaponName];
+    nlohmann::json currentChosenWeapon = selectedWeaponType[weaponName];
 
     double averageShot = 0;
     double averageBurstDPS = 0;
     double averageSustainedDPS = 0;
     std::vector<std::string> singleShotMods = {};
-    std::vector<std::string> singleBurstDPSMods = {};
-    std::vector<std::string> singleSustainedDPSMods = {};
+    std::vector<std::string> burstDPSMods = {};
+    std::vector<std::string> sustainedDPSMods = {};
 
 
     // filter to only check valid mod options
-    std::vector<nlohmann::json> compatibleMods {};
     int currentModIndex = 0;
-    std::string currentWeaponType = currentWeapon["Class"];
+    std::string currentWeaponType = currentChosenWeapon["Class"];
 
     /// Skip any mods with IsFlawed that is set to true
     /// If any entry in "Incompatible" starts with "Primed" there is a prime variant, so ignore the base    -   done in loading mods, not needed in this file
@@ -443,7 +462,7 @@ int main()
     // prune extra mods
     for (auto currMod = validMods.begin(); currMod != validMods.end();)
     {   // iterate from start until end
-        if (currMod->getPruneThis() == true)
+        if (currMod->pruneThis == true)
         {   //  if mod should be pruned, erase it, iterator auto skips to the next entry
             currMod = validMods.erase(currMod);
             //  std::cout << "Pruning " << currMod->name << std::endl;
@@ -460,46 +479,362 @@ int main()
     //     std::cout << currMod.name << " is compatible with " << currentWeapon["Name"]  << " and I am accounting for it" << std::endl;
     // }
 
-    int attackIndex = 1;
-    while (attackIndex <= currentWeapon["Attacks"].size())
+    // Parse weapon into weapon dictionary      -       so I can make it do every weapon later
+    std::vector<Weapon> weaponList = {};
+    // for (auto& [weaponName, weaponData] : selectedWeaponType.items())
+    // {
+    std::vector<attackData> attackList = {};
+    for (auto& currentAttack : currentChosenWeapon["Attacks"])
+    {
+        // for (auto& [damageType, damageAmount] : currentAttack.value("Damage", std::unordered_map<std::string, double>{}))
+        // {
+        //     std::cout << damageType << ": " << damageAmount << std::endl;
+        // }
+        attackList.push_back(
+            attackData(
+                currentAttack.value("AttackIndex", 0.0),       //  attackIndex
+                currentAttack.value("AttackName", ""),          //  attackName
+                currentAttack.value("ShotType", ""),            //  shotType
+                currentAttack.value("CritChance", -999.0),        //  critChance
+                currentAttack.value("CritMultiplier", -999.0),    //  critMultiplier
+                currentAttack.value("StatusChance", -999.0),      //  statusChance
+                currentAttack.value("FireRate", -999.0),          //  fireRate
+                currentAttack.value("AmmoCost", 1.0),          //  ammoCost
+                currentAttack.value("Multishot", 1.0),         //  multishot
+                currentAttack.value("BurstCount", 1.0),        //  burstCount
+                currentAttack.value("BurstDelay", 0.0),        //  burstDelay
+                currentAttack.value("Trigger", ""),             //  triggerType
+                currentAttack.value("ForcedProcs", std::vector<std::string>{}),    //  forcedProcs
+                currentAttack.value("Damage", std::unordered_map<std::string, double>{})    //  damage
+            )
+        );
+    }
+    weaponList.push_back(Weapon(
+            currentChosenWeapon.value("Name", ""),                //  name
+            currentChosenWeapon.value("Class", ""),               //  className
+            currentChosenWeapon.value("Family", ""),              //  weaponFamily
+            currentChosenWeapon.value("Trigger", ""),             //  triggerType
+            currentChosenWeapon.value("Magazine", 0.0),          //  magazineCapacity
+            currentChosenWeapon.value("Reload", 0.0),            //  reloadSpeed
+            currentChosenWeapon.value("Disposition", 0.0),       //  rivenDisposition
+            currentChosenWeapon.value("Spool", 0.0),             //  spoolSpeed
+            currentChosenWeapon.value("ReloadDelay", 0.0),       //  reloadDelay     -   charge weapons
+            currentChosenWeapon.value("ReloadRate", 0.0),        //  reloadRate      -   charge weapons
+            currentChosenWeapon.value("ComboDur", 0.0),          //  comboDuration
+            currentChosenWeapon.value("HeavyAttack", 0.0),       //  heavyAttackDamage
+            currentChosenWeapon.value("CompatibilityTags", std::vector<std::string>{}),   //  compatibilityTags
+            currentChosenWeapon.value("DefaultUpgrades", std::vector<std::string>{}),     //  innateUpgrades
+            attackList                                      //  attackList
+        ));
+    // }
+
+
+    // ---------------------------------------- BASE MOD CONFIG ----------------------------------------
+    weaponModConfig currentModConfig = weaponModConfig();
+    // ---------------------------------------- BASE ENEMY INFO ----------------------------------------
+    Enemy currEnemy = Enemy();
+    const std::unordered_map<std::string, double> baseStatusCounts = {
+        {"Impact", 0},
+        {"Puncture", 0},
+        {"Slash", 0},
+        {"Heat", 0},
+        {"Cold", 0},
+        {"Electricity", 0},
+        {"Toxin", 0},
+        {"Blast", 0},
+        {"Corrosive", 0},
+        {"Gas", 0},
+        {"Magnetic", 0},
+        {"Radiation", 0},
+        {"Viral", 0},
+        {"Tau", 0}
+        };
+
+
+    unsigned long long totalCalculations = 1;
+    for (unsigned long long k = 1; k <= 8; k++)
+    {
+        totalCalculations = totalCalculations * (validMods.size() - 8 + k) / k;
+    }
+    unsigned long long completedCalculations = 0;
+
+
+    for (auto& currentWeapon : weaponList)
     {
         // TODO: figure out how to make this be while there are still mod combinations left
         // nested for loops, each starting at 1 higher index, each ending 1 index earlier from the end of valid mods vector
         // then also make a loop that tries each permutation of elemental mods to try their configs
-        for (int i = 0; i <= 0; i++)
+        for (int modSlotOneIndex = 0; modSlotOneIndex < validMods.size() - 7; modSlotOneIndex++)
         {
-            nlohmann::json moddedWeapon = currentWeapon;
-            std::vector<std::string> currentModConfig = {};
-            // ---------------------------------------- CHOOSE MODS HERE ----------------------------------------
-
-            // will edit modded entry based on mods here? maybe? maybe try each mod then pass to damage calc?
-            // ---------------------------------------- CHOOSE MODS HERE ----------------------------------------
-
-
-            // ---------------------------------------- BASE ENEMY INFO ----------------------------------------
-            Enemy currEnemy = Enemy();
-
-
-
-            
-            // ---------------------------------------- CALCULATE DAMAGE ----------------------------------------
-
-            auto [tempAverageShot, tempAverageBurstDPS, tempAverageSustainedDPS] = calculateDPSValues(moddedWeapon, (attackIndex - 1), weaponGeneralClass, currEnemy);
-            if (tempAverageShot > averageShot)
+            // this section skips to the next possible mod in this slot if any mods that are already selected are incompatible with it
+            bool skipModSlotOne = false;
+            for (std::string incompatibleMod : validMods[modSlotOneIndex].incompatibleMods)
             {
-                averageShot = tempAverageShot; // TODO: save mod config too
+                if (std::find(currentModConfig.currentMods.begin(), currentModConfig.currentMods.end(), incompatibleMod) != currentModConfig.currentMods.end())
+                {   // if there is an incompatible mod already in the current mod config
+                    skipModSlotOne = true;
+                }
             }
-            if (tempAverageBurstDPS > averageBurstDPS)
+            if (skipModSlotOne)
             {
-                averageBurstDPS = tempAverageBurstDPS; // TODO: save mod config too
+                continue;   //  skip to next mod in this slot
             }
-            if (tempAverageSustainedDPS > averageSustainedDPS)
+
+            currentModConfig.addMod(validMods[modSlotOneIndex]);
+            // Start lower level loop
+            for (int modSlotTwoIndex = modSlotOneIndex + 1; modSlotTwoIndex < validMods.size() - 6; modSlotTwoIndex++)
             {
-                averageSustainedDPS = tempAverageSustainedDPS; // TODO: save mod config too
+                // this section skips to the next possible mod in this slot if any mods that are already selected are incompatible with it
+                bool skipModSlotTwo = false;
+                for (std::string incompatibleMod : validMods[modSlotTwoIndex].incompatibleMods)
+                {
+                    if (std::find(currentModConfig.currentMods.begin(), currentModConfig.currentMods.end(), incompatibleMod) != currentModConfig.currentMods.end())
+                    {   // if there is an incompatible mod already in the current mod config
+                        skipModSlotTwo = true;
+                    }
+                }
+                if (skipModSlotTwo)
+                {
+                    continue;   //  skip to next mod in this slot
+                }
+
+                currentModConfig.addMod(validMods[modSlotTwoIndex]);
+                // Start lower level loop
+                for (int modSlotThreeIndex = modSlotTwoIndex + 1; modSlotThreeIndex < validMods.size() - 5; modSlotThreeIndex++)
+                {
+                    // this section skips to the next possible mod in this slot if any mods that are already selected are incompatible with it
+                    bool skipModSlotThree = false;
+                    for (std::string incompatibleMod : validMods[modSlotThreeIndex].incompatibleMods)
+                    {
+                        if (std::find(currentModConfig.currentMods.begin(), currentModConfig.currentMods.end(), incompatibleMod) != currentModConfig.currentMods.end())
+                        {   // if there is an incompatible mod already in the current mod config
+                            skipModSlotThree = true;
+                        }
+                    }
+                    if (skipModSlotThree)
+                    {
+                        continue;   //  skip to next mod in this slot
+                    }
+
+                    currentModConfig.addMod(validMods[modSlotThreeIndex]);
+                    // Start lower level loop
+                    for (int modSlotFourIndex = modSlotThreeIndex + 1; modSlotFourIndex < validMods.size() - 4; modSlotFourIndex++)
+                    {
+                        // this section skips to the next possible mod in this slot if any mods that are already selected are incompatible with it
+                        bool skipModSlotFour = false;
+                        for (std::string incompatibleMod : validMods[modSlotFourIndex].incompatibleMods)
+                        {
+                            if (std::find(currentModConfig.currentMods.begin(), currentModConfig.currentMods.end(), incompatibleMod) != currentModConfig.currentMods.end())
+                            {   // if there is an incompatible mod already in the current mod config
+                                skipModSlotFour = true;
+                            }
+                        }
+                        if (skipModSlotFour)
+                        {
+                            continue;   //  skip to next mod in this slot
+                        }
+
+                        currentModConfig.addMod(validMods[modSlotFourIndex]);
+                        // Start lower level loop
+                        for (int modSlotFiveIndex = modSlotFourIndex + 1; modSlotFiveIndex < validMods.size() - 3; modSlotFiveIndex++)
+                        {
+                            // this section skips to the next possible mod in this slot if any mods that are already selected are incompatible with it
+                            bool skipModSlotFive = false;
+                            for (std::string incompatibleMod : validMods[modSlotFiveIndex].incompatibleMods)
+                            {
+                                if (std::find(currentModConfig.currentMods.begin(), currentModConfig.currentMods.end(), incompatibleMod) != currentModConfig.currentMods.end())
+                                {   // if there is an incompatible mod already in the current mod config
+                                    skipModSlotFive = true;
+                                }
+                            }
+                            if (skipModSlotFive)
+                            {
+                                continue;   //  skip to next mod in this slot
+                            }
+
+                            currentModConfig.addMod(validMods[modSlotFiveIndex]);
+                            // Start lower level loop
+                            for (int modSlotSixIndex = modSlotFiveIndex + 1; modSlotSixIndex < validMods.size() - 2; modSlotSixIndex++)
+                            {
+                                // this section skips to the next possible mod in this slot if any mods that are already selected are incompatible with it
+                                bool skipModSlotSix = false;
+                                for (std::string incompatibleMod : validMods[modSlotSixIndex].incompatibleMods)
+                                {
+                                    if (std::find(currentModConfig.currentMods.begin(), currentModConfig.currentMods.end(), incompatibleMod) != currentModConfig.currentMods.end())
+                                    {   // if there is an incompatible mod already in the current mod config
+                                        skipModSlotSix = true;
+                                    }
+                                }
+                                if (skipModSlotSix)
+                                {
+                                    continue;   //  skip to next mod in this slot
+                                }
+
+                                currentModConfig.addMod(validMods[modSlotSixIndex]);
+                                // Start lower level loop
+                                for (int modSlotSevenIndex = modSlotSixIndex + 1; modSlotSevenIndex < validMods.size() - 1; modSlotSevenIndex++)
+                                {
+                                    // this section skips to the next possible mod in this slot if any mods that are already selected are incompatible with it
+                                    bool skipModSlotSeven = false;
+                                    for (std::string incompatibleMod : validMods[modSlotSevenIndex].incompatibleMods)
+                                    {
+                                        if (std::find(currentModConfig.currentMods.begin(), currentModConfig.currentMods.end(), incompatibleMod) != currentModConfig.currentMods.end())
+                                        {   // if there is an incompatible mod already in the current mod config
+                                            skipModSlotSeven = true;
+                                        }
+                                    }
+                                    if (skipModSlotSeven)
+                                    {
+                                        continue;   //  skip to next mod in this slot
+                                    }
+
+                                    currentModConfig.addMod(validMods[modSlotSevenIndex]);
+                                    // Start lower level loop
+                                    for (int modSlotEightIndex = modSlotSevenIndex + 1; modSlotEightIndex < validMods.size(); modSlotEightIndex++)
+                                    {
+                                        // this section skips to the next possible mod in this slot if any mods that are already selected are incompatible with it
+                                        bool skipModSlotEight = false;
+                                        for (std::string incompatibleMod : validMods[modSlotEightIndex].incompatibleMods)
+                                        {
+                                            if (std::find(currentModConfig.currentMods.begin(), currentModConfig.currentMods.end(), incompatibleMod) != currentModConfig.currentMods.end())
+                                            {   // if there is an incompatible mod already in the current mod config
+                                                skipModSlotEight = true;
+                                            }
+                                        }
+                                        if (skipModSlotEight)
+                                        {
+                                            continue;   //  skip to next mod in this slot
+                                        }
+                        
+                                        currentModConfig.addMod(validMods[modSlotEightIndex]);
+
+                                        // auto weaponBeforeMod = currentWeapon;
+
+                                        // ---------------------------------------- APPLY MOD CONFIG ----------------------------------------
+                                        currentWeapon.applyModConfig(currentModConfig);
+                                        
+                                        // ---------------------------------------- FOR EACH ATTACK ----------------------------------------
+                                        for (auto& currentAttack : currentWeapon.attackList)
+                                        {                    
+                                            // ---------------------------------------- RESET ENEMY INFO ----------------------------------------
+                                            currEnemy.setStatusCounts(baseStatusCounts);
+
+                                            // ---------------------------------------- PRINT CONFIG STATS ----------------------------------------
+                                            // for (auto& [k, v] : currentModConfig.weaponModifiers)
+                                            // {
+                                            //     if (v != 0)
+                                            //     {
+                                            //         std::cout << k << ": " << v << std::endl;
+                                            //     }
+                                            // }
+                                            // for (auto& [k, v] : currentModConfig.statusTypeModifiers)
+                                            // {
+                                            //     if (v != 0)
+                                            //     {
+                                            //         std::cout << k << ": " << v << std::endl;
+                                            //     }
+                                            // }
+
+                                            // ---------------------------------------- CALCULATE DAMAGE ----------------------------------------
+                                            auto [tempAverageShot, tempAverageBurstDPS, tempAverageSustainedDPS] = calculateDPSValues(currentWeapon, currentAttack, weaponGeneralClass, currEnemy);
+                                                    // std::cout << "I calculated the DPS!\n";
+                                            if (tempAverageShot > averageShot)
+                                            {
+                                                averageShot = tempAverageShot;
+                                                singleShotMods = currentModConfig.currentMods;
+                                            }
+                                            if (tempAverageBurstDPS > averageBurstDPS)
+                                            {
+                                                averageBurstDPS = tempAverageBurstDPS;
+                                                burstDPSMods = currentModConfig.currentMods;
+                                            }
+                                            if (tempAverageSustainedDPS > averageSustainedDPS)
+                                            {
+                                                averageSustainedDPS = tempAverageSustainedDPS;
+                                                sustainedDPSMods = currentModConfig.currentMods;
+                                            }
+                                        }
+
+                                        if ((++completedCalculations % 1000000) == 0)
+                                        {   //  print remaining calculation number every 100k completed calcs
+                                            std::cout << "Remaining: " << (totalCalculations - completedCalculations) << '\n';
+                                        }
+
+                                        // ---------------------------------------- REMOVE MOD CONFIG --------------------------------------
+                                        currentWeapon.removeModConfig(currentModConfig);
+
+                                        currentModConfig.removeMod(validMods[modSlotEightIndex]);    //  Last entry should always be this mod as it is about to move to a lower level
+                                        // Move up a loop
+                                        /*
+                                        //  This block checks to see if the mod was different before and after mods were applied (also uncomment the above dfeinition of weaponBeforeMod)
+                                        auto weaponAfterModRemoved = currentWeapon;
+
+                                        if ((weaponAfterModRemoved.magazineCapacity - weaponBeforeMod.magazineCapacity) != 0)
+                                        {
+                                            std::cout << "Magazine Capacity" << ": " << weaponBeforeMod.magazineCapacity << " -> " << weaponAfterModRemoved.magazineCapacity << "\n";
+                                        }
+                                        if ((weaponAfterModRemoved.reloadSpeed - weaponBeforeMod.reloadSpeed) != 0)
+                                        {
+                                            std::cout << "Reload Speed" << ": " << weaponBeforeMod.reloadSpeed << " -> " << weaponAfterModRemoved.reloadSpeed << "\n";
+                                        }
+                                        if ((weaponAfterModRemoved.baseDamageModifier - weaponBeforeMod.baseDamageModifier) != 0)
+                                        {
+                                            std::cout << "Base Damage Mod" << ": " << weaponBeforeMod.baseDamageModifier << " -> " << weaponAfterModRemoved.baseDamageModifier << "\n";
+                                        }
+                                        if ((weaponAfterModRemoved.attackList[0].fireRate - weaponBeforeMod.attackList[0].fireRate) != 0)
+                                        {
+                                            std::cout << "Fire Rate" << ": " << weaponBeforeMod.attackList[0].fireRate << " -> " << weaponAfterModRemoved.attackList[0].fireRate << "\n";
+                                        }
+                                        if ((weaponAfterModRemoved.attackList[0].critChance - weaponBeforeMod.attackList[0].critChance) != 0)
+                                        {
+                                            std::cout << "Crit Chance" << ": " << weaponBeforeMod.attackList[0].critChance << " -> " << weaponAfterModRemoved.attackList[0].critChance << "\n";
+                                        }
+                                        if ((weaponAfterModRemoved.attackList[0].critMultiplier - weaponBeforeMod.attackList[0].critMultiplier) != 0)
+                                        {
+                                            std::cout << "Crit Multiplier" << ": " << weaponBeforeMod.attackList[0].critMultiplier << " -> " << weaponAfterModRemoved.attackList[0].critMultiplier << "\n";
+                                        }
+                                        if ((weaponAfterModRemoved.attackList[0].multishot - weaponBeforeMod.attackList[0].multishot) != 0)
+                                        {
+                                            std::cout << "Multishot" << ": " << weaponBeforeMod.attackList[0].multishot << " -> " << weaponAfterModRemoved.attackList[0].multishot << "\n";
+                                        }
+                                        if (currentModConfig.currentMods.size() != 1)
+                                        {
+                                            std::cout << "Applying " << currentModConfig.currentMods.size() << " mods" << std::endl;
+                                        }
+                                        for (auto& currAttack : weaponBeforeMod.attackList)
+                                        {
+                                            for (auto& [k, v] : currAttack.damage)
+                                            {
+                                                if ((v - weaponAfterModRemoved.attackList[currAttack.attackIndex - 1].damage[k]) != 0)
+                                                {
+                                                    std::cout << k << ": " << currAttack.damage[k] << " -> " << v << std::endl;
+                                                }
+                                            }
+                                        }
+                                            */
+                                    }
+                                    currentModConfig.removeMod(validMods[modSlotSevenIndex]);    //  Last entry should always be this mod as it is about to move to a lower level
+                                    // Move up a loop
+                                }
+                                currentModConfig.removeMod(validMods[modSlotSixIndex]);    //  Last entry should always be this mod as it is about to move to a lower level
+                                // Move up a loop
+                            }
+                            currentModConfig.removeMod(validMods[modSlotFiveIndex]);    //  Last entry should always be this mod as it is about to move to a lower level
+                            // Move up a loop
+                        }
+                        currentModConfig.removeMod(validMods[modSlotFourIndex]);    //  Last entry should always be this mod as it is about to move to a lower level
+                        // Move up a loop
+                    }
+                    currentModConfig.removeMod(validMods[modSlotThreeIndex]);    //  Last entry should always be this mod as it is about to move to a lower level
+                    // Move up a loop
+                }
+                currentModConfig.removeMod(validMods[modSlotTwoIndex]);    //  Last entry should always be this mod as it is about to move to a lower level
+                // Move up a loop
             }
-            std::cout << "For the: " << currentWeapon["Name"] << "'s attack number " << attackIndex << " the stats are as follows: Average shot: " << tempAverageShot << ", Average burst DPS: " << tempAverageBurstDPS << ", Average Sustained DPS: " << tempAverageSustainedDPS << std::endl;
+            currentModConfig.removeMod(validMods[modSlotOneIndex]);    //  Last entry should always be this mod as it is about to move to a lower level
+            // Move up a loop
         }
-        attackIndex++;
+        std::cout << "For the: " << currentWeapon.name << " the calculated best stats are as follows: Average shot: " << averageShot << ", Average burst DPS: " << averageBurstDPS << ", Average Sustained DPS: " << averageSustainedDPS << std::endl;
     }
     return 0;
 }

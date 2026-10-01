@@ -17,11 +17,9 @@ class weaponMod
         std::vector<std::string> incompatibleMods = {};     // incompatible mods                (if they exist)
         std::string className = "";                         // class name                       (if it exists)
 
-        bool locksFireRate = false;                         // whether the mod should lock the fire rate of the weapon otherwise
-
         bool pruneThis = false;                             // whether the mod should be pruned (ie: better version exists so don't count in damage calcs, or no affect on damage outcome (for example, ammo max mods))
         
-        std::unordered_map<std::string, int> weaponModifiers = {        // the comment is the string to regex for when parsing a mod description
+        std::unordered_map<std::string, double> weaponModifiers = {        // the comment is the string to regex for when parsing a mod description
             {"Fire Rate", 0},           // "Fire Rate" or "Attack Speed"
             {"Multishot", 0},           // "Multishot"
             {"Magazine Capacity", 0},   // "Magazine Capacity"
@@ -33,16 +31,17 @@ class weaponMod
             {"Status Damage", 0},       // "Status Damage"
             {"Reload Speed", 0},        // "Reload Speed"
             {"GunCODamage", 0},         // "Direct Damage per Status Type affecting the target" or "Melee Damage per Status Type affecting the target"
-            {"isFireRateLocked", 0}     // "Fire Rate cannot be modified"
+            {"isFireRateLocked", 0},    // "Fire Rate cannot be modified"
+            {"isMultishotLocked", 0}    // "Multishot cannot be modified"
         };
 
-        std::unordered_map<std::string, int> statusTypeModifiers = {        // the comment is the string to regex for when parsing a mod description
+        std::unordered_map<std::string, double> statusTypeModifiers = {        // the comment is the string to regex for when parsing a mod description
             {"Impact", 0},              // "<DT_IMPACT_COLOR>Impact"
             {"Puncture", 0},            // "<DT_PUNCTURE_COLOR>Puncture"
             {"Slash", 0},               // "<DT_SLASH_COLOR>Slash"
             {"Heat", 0},                // "<DT_FIRE_COLOR>Heat"
             {"Cold", 0},                // "<DT_FREEZE_COLOR>Cold"
-            {"Electric", 0},            // "<DT_ELECTRICITY_COLOR>Electricity"
+            {"Electricity", 0},            // "<DT_ELECTRICITY_COLOR>Electricity"
             {"Toxin", 0},               // "<DT_POISON_COLOR>Toxin"
             {"Blast", 0},               // "<DT_EXPLOSION_COLOR>Blast"
             {"Corrosive", 0},           // "<DT_CORROSIVE_COLOR>Corrosive"
@@ -72,10 +71,6 @@ class weaponMod
         };
 
 
-        // general getters
-        double getPruneThis() const { return pruneThis; }
-        std::unordered_map<std::string, int> getWeaponModifiers() const { return weaponModifiers; }
-        std::unordered_map<std::string, int> getStatusTypeModifiers() const { return statusTypeModifiers; }
 
         weaponMod(std::string newName, std::string newType, std::string newDescription, std::string newSetName, std::string newClassName, std::vector<std::string> newIncompatibilityTags, std::vector<std::string> newIncompatibleMods, std::vector<std::string> newUpgradeTypes) // make this constructor create a mod based on passed in data. I need to decide how to pass in the data from the json though
         {
@@ -92,11 +87,7 @@ class weaponMod
 
             for (auto& upgradeType : newUpgradeTypes)
             {
-                // TODO: list all useful tags in upgradeTypes field for a mod, so I can set a mod to be pruned if it doesn't have at least one of them
-                // Use if (a OR b OR c OR d)
-                // do nothing
-                // else set to prune
-                // that way the or checks will break and go right away, slightly optimized performance
+                // if a mod does not affect a notable stat, move to prune it for less mods to consider/compute, lowers time & space complexity
                 auto valuableUpgradeTypeThatExists = std::find(valuableUpgradeTypes.begin(), valuableUpgradeTypes.end(), upgradeType);
                 if (valuableUpgradeTypeThatExists != valuableUpgradeTypes.end())
                 {
@@ -134,7 +125,7 @@ class weaponMod
                             this->weaponModifiers["Damage"] = 240;
                         }
                         // Find a way to lock fire rate
-                        this->locksFireRate = true;
+                        this->weaponModifiers["isFireRateLocked"]++;
                     } else if (this->description.find("On ") == 0) // finds if the first match is at 0
                     {
                         /// List of mods to parse
@@ -379,7 +370,7 @@ class weaponMod
                                 {   //  Primed Elemental Mod
                                     if (this->description[10] == 'E')
                                     {   //  Primed Convulsion
-                                        this->statusTypeModifiers["Electric"] = 165;
+                                        this->statusTypeModifiers["Electricity"] = 165;
                                     }
                                     else if (this->description[10] == 'I')
                                     {   //  Primed Heavy Trauma
@@ -476,7 +467,7 @@ class weaponMod
                                 }
                                 else if (this->description[5] == 'H')
                                 {   //  Focus Energy
-                                    this->statusTypeModifiers["Electric"] = 60;
+                                    this->statusTypeModifiers["Electricity"] = 60;
                                 }
                                 else if (this->description[5] == 'M')
                                 {   //  Ice Storm
@@ -544,7 +535,7 @@ class weaponMod
                             {   //  Elemental 60/60 mods
                                 if (this->description[9] == 'E')
                                 {   //  Electric 60/60 mods
-                                    this->statusTypeModifiers["Electric"] = 60;
+                                    this->statusTypeModifiers["Electricity"] = 60;
                                     this->weaponModifiers["Status Chance"] = 60;
                                 }
                                 else if (this->description[9] == 'M')
@@ -726,7 +717,7 @@ class weaponMod
                             {   //  Elemental mods
                                 if (this->description[9] == 'E')
                                 {   //  Electric
-                                    this->statusTypeModifiers["Electric"] = 90;
+                                    this->statusTypeModifiers["Electricity"] = 90;
                                 }
                                 else if (this->description[10] == 'I')
                                 {   //  Heat
