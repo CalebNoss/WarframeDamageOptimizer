@@ -41,7 +41,7 @@ json loadJsonFile(std::string fileName)
 
 
 
-std::tuple<double, double, double> calculateDPSValues(Weapon& moddedWeapon, attackData& currAttack, std::string& weaponType, Enemy& currEnemy)
+std::tuple<double, double, double> calculateDPSValues(Weapon& moddedWeapon, attackData& currAttack, std::string& weaponType, Enemy& currEnemy, std::vector<std::string>& damageTypeIndices)
 {
     // ---------------------------------------- CALCULATE DAMAGE ----------------------------------------
     // std::cout << "Starting damage calcs\n";
@@ -53,7 +53,7 @@ std::tuple<double, double, double> calculateDPSValues(Weapon& moddedWeapon, atta
 
     for (const auto& damageType : currAttack.damage)
     {
-        totalDamage += damageType.second;
+        totalDamage += damageType;
         // if (damageType.second != 0)
         // {
         //     std::cout << "The " << damageType.first << " damage is: " << damageType.second << std::endl;
@@ -120,36 +120,40 @@ std::tuple<double, double, double> calculateDPSValues(Weapon& moddedWeapon, atta
 
     // Calculate status amounts on enemy
     std::unordered_map<std::string, double>* currStatusCounts = currEnemy.getStatusCounts();
-    for (const auto& damageType : currAttack.damage)
+    for (int i = 0; i < 14; i++)
     {
-        // use each types damage as a proportion of totalDamage to get damage distribution
-        // multiply by status chance to get amount applied per hit
-        // multiply by multishot to get amount applied per shot
-        // multiply by effective fire rate to get procs/second
-        // divide by time to expire or something to find amount per second on average considering expiration time
-        // cap at max amount
-        // add to enemy
-        // update damage calculations ot take into account the CC, CD, etc. buffs
-        double proportionOfTotalDamage = damageType.second / totalDamage;
-        double statusAppliedPerHit = proportionOfTotalDamage * currAttack.statusChance;
-        double statusAppliedPerShot = statusAppliedPerHit * multishotValue;
-        double statusAppliedPerSecond = statusAppliedPerShot * effectiveFireRate;
-
-        // std::cout << "I got here too!\n";
-
-        // multiply by status duration
-        double averageStatusCount = statusAppliedPerSecond * ((currEnemy.getStatusDurations()).at(damageType.first) * moddedWeapon.statusDuration);
-        // round down if above cap
-        double finalStatusCount = 0;
-        if (averageStatusCount >= (currEnemy.getStatusCaps()).at(damageType.first))
+        if (currAttack.damage[i] != 0)  // skip if this damage doesn't exist
         {
-            finalStatusCount = (currEnemy.getStatusCaps()).at(damageType.first);
-        } else
-        {
-            finalStatusCount = averageStatusCount;
+            std::string& damageTypeName = damageTypeIndices[i];
+            // use each types damage as a proportion of totalDamage to get damage distribution
+            // multiply by status chance to get amount applied per hit
+            // multiply by multishot to get amount applied per shot
+            // multiply by effective fire rate to get procs/second
+            // divide by time to expire or something to find amount per second on average considering expiration time
+            // cap at max amount
+            // add to enemy
+            // update damage calculations ot take into account the CC, CD, etc. buffs
+            double proportionOfTotalDamage = currAttack.damage[i] / totalDamage;
+            double statusAppliedPerHit = proportionOfTotalDamage * currAttack.statusChance;
+            double statusAppliedPerShot = statusAppliedPerHit * multishotValue;
+            double statusAppliedPerSecond = statusAppliedPerShot * effectiveFireRate;
+
+            // std::cout << "I got here too!\n";
+
+            // multiply by status duration
+            double averageStatusCount = statusAppliedPerSecond * ((currEnemy.getStatusDurations()).at(damageTypeName) * moddedWeapon.statusDuration);
+            // round down if above cap
+            double finalStatusCount = 0;
+            if (averageStatusCount >= (currEnemy.getStatusCaps()).at(damageTypeName))
+            {
+                finalStatusCount = (currEnemy.getStatusCaps()).at(damageTypeName);
+            } else
+            {
+                finalStatusCount = averageStatusCount;
+            }
+
+            (*currStatusCounts)[damageTypeName] = finalStatusCount;
         }
-
-        (*currStatusCounts)[damageType.first] = finalStatusCount;
     }
 
     double statusAndModdedCritChance = ((currAttack.critChance) + currEnemy.getAddedCritChance());
@@ -549,7 +553,22 @@ int main()
         {"Viral", 0},
         {"Tau", 0}
         };
-
+        std::vector<std::string> damageTypeIndices = {
+            "Impact",
+            "Puncture",
+            "Slash",
+            "Heat",
+            "Cold",
+            "Electricity",
+            "Toxin",
+            "Blast",
+            "Corrosive",
+            "Gas",          
+            "Magnetic",
+            "Radiation",
+            "Viral",
+            "Tau"
+        };
 
     unsigned long long totalCalculations = 1;
     for (unsigned long long k = 1; k <= 8; k++)
@@ -568,7 +587,7 @@ int main()
         {
             // this section skips to the next possible mod in this slot if any mods that are already selected are incompatible with it
             bool skipModSlotOne = false;
-            for (std::string incompatibleMod : validMods[modSlotOneIndex].incompatibleMods)
+            for (std::string& incompatibleMod : validMods[modSlotOneIndex].incompatibleMods)
             {
                 if (std::find(currentModConfig.currentMods.begin(), currentModConfig.currentMods.end(), incompatibleMod) != currentModConfig.currentMods.end())
                 {   // if there is an incompatible mod already in the current mod config
@@ -586,7 +605,7 @@ int main()
             {
                 // this section skips to the next possible mod in this slot if any mods that are already selected are incompatible with it
                 bool skipModSlotTwo = false;
-                for (std::string incompatibleMod : validMods[modSlotTwoIndex].incompatibleMods)
+                for (std::string& incompatibleMod : validMods[modSlotTwoIndex].incompatibleMods)
                 {
                     if (std::find(currentModConfig.currentMods.begin(), currentModConfig.currentMods.end(), incompatibleMod) != currentModConfig.currentMods.end())
                     {   // if there is an incompatible mod already in the current mod config
@@ -604,7 +623,7 @@ int main()
                 {
                     // this section skips to the next possible mod in this slot if any mods that are already selected are incompatible with it
                     bool skipModSlotThree = false;
-                    for (std::string incompatibleMod : validMods[modSlotThreeIndex].incompatibleMods)
+                    for (std::string& incompatibleMod : validMods[modSlotThreeIndex].incompatibleMods)
                     {
                         if (std::find(currentModConfig.currentMods.begin(), currentModConfig.currentMods.end(), incompatibleMod) != currentModConfig.currentMods.end())
                         {   // if there is an incompatible mod already in the current mod config
@@ -622,7 +641,7 @@ int main()
                     {
                         // this section skips to the next possible mod in this slot if any mods that are already selected are incompatible with it
                         bool skipModSlotFour = false;
-                        for (std::string incompatibleMod : validMods[modSlotFourIndex].incompatibleMods)
+                        for (std::string& incompatibleMod : validMods[modSlotFourIndex].incompatibleMods)
                         {
                             if (std::find(currentModConfig.currentMods.begin(), currentModConfig.currentMods.end(), incompatibleMod) != currentModConfig.currentMods.end())
                             {   // if there is an incompatible mod already in the current mod config
@@ -640,7 +659,7 @@ int main()
                         {
                             // this section skips to the next possible mod in this slot if any mods that are already selected are incompatible with it
                             bool skipModSlotFive = false;
-                            for (std::string incompatibleMod : validMods[modSlotFiveIndex].incompatibleMods)
+                            for (std::string& incompatibleMod : validMods[modSlotFiveIndex].incompatibleMods)
                             {
                                 if (std::find(currentModConfig.currentMods.begin(), currentModConfig.currentMods.end(), incompatibleMod) != currentModConfig.currentMods.end())
                                 {   // if there is an incompatible mod already in the current mod config
@@ -658,7 +677,7 @@ int main()
                             {
                                 // this section skips to the next possible mod in this slot if any mods that are already selected are incompatible with it
                                 bool skipModSlotSix = false;
-                                for (std::string incompatibleMod : validMods[modSlotSixIndex].incompatibleMods)
+                                for (std::string& incompatibleMod : validMods[modSlotSixIndex].incompatibleMods)
                                 {
                                     if (std::find(currentModConfig.currentMods.begin(), currentModConfig.currentMods.end(), incompatibleMod) != currentModConfig.currentMods.end())
                                     {   // if there is an incompatible mod already in the current mod config
@@ -676,7 +695,7 @@ int main()
                                 {
                                     // this section skips to the next possible mod in this slot if any mods that are already selected are incompatible with it
                                     bool skipModSlotSeven = false;
-                                    for (std::string incompatibleMod : validMods[modSlotSevenIndex].incompatibleMods)
+                                    for (std::string& incompatibleMod : validMods[modSlotSevenIndex].incompatibleMods)
                                     {
                                         if (std::find(currentModConfig.currentMods.begin(), currentModConfig.currentMods.end(), incompatibleMod) != currentModConfig.currentMods.end())
                                         {   // if there is an incompatible mod already in the current mod config
@@ -694,7 +713,7 @@ int main()
                                     {
                                         // this section skips to the next possible mod in this slot if any mods that are already selected are incompatible with it
                                         bool skipModSlotEight = false;
-                                        for (std::string incompatibleMod : validMods[modSlotEightIndex].incompatibleMods)
+                                        for (std::string& incompatibleMod : validMods[modSlotEightIndex].incompatibleMods)
                                         {
                                             if (std::find(currentModConfig.currentMods.begin(), currentModConfig.currentMods.end(), incompatibleMod) != currentModConfig.currentMods.end())
                                             {   // if there is an incompatible mod already in the current mod config
@@ -736,7 +755,7 @@ int main()
                                             // }
 
                                             // ---------------------------------------- CALCULATE DAMAGE ----------------------------------------
-                                            auto [tempAverageShot, tempAverageBurstDPS, tempAverageSustainedDPS] = calculateDPSValues(currentWeapon, currentAttack, weaponGeneralClass, currEnemy);
+                                            auto [tempAverageShot, tempAverageBurstDPS, tempAverageSustainedDPS] = calculateDPSValues(currentWeapon, currentAttack, weaponGeneralClass, currEnemy, damageTypeIndices);
                                                     // std::cout << "I calculated the DPS!\n";
                                             if (tempAverageShot > averageShot)
                                             {
@@ -836,6 +855,9 @@ int main()
         }
         std::cout << "For the: " << currentWeapon.name << " the calculated best stats are as follows: Average shot: " << averageShot << ", Average burst DPS: " << averageBurstDPS << ", Average Sustained DPS: " << averageSustainedDPS << std::endl;
     }
+    
+    // waits for user to hit enter to leave program
+    std::cin.get();
     return 0;
 }
 

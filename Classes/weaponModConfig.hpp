@@ -17,37 +17,38 @@ class weaponModConfig
         std::vector<std::string> elementalMods = {};        // values affected                  (always)
         std::vector<std::string> elementalModsOrder = {};   // incompatible mods                (if they exist)
         
-        std::unordered_map<std::string, double> weaponModifiers = {        // the comment is the string to regex for when parsing a mod description
-            {"Fire Rate", 0},           // "Fire Rate" or "Attack Speed"
-            {"Multishot", 0},           // "Multishot"
-            {"Magazine Capacity", 0},   // "Magazine Capacity"
-            {"Critical Chance", 0},     // "Critical Chance"
-            {"Critical Damage", 0},     // "Critical Damage"
-            {"Damage", 0},              // "Damage" or "Melee Damage"
-            {"Status Duration", 0},     // "Status Duration"
-            {"Status Chance", 0},       // "Status Chance"
-            {"Status Damage", 0},       // "Status Damage"
-            {"Reload Speed", 0},        // "Reload Speed"
-            {"GunCODamage", 0},         // "Direct Damage per Status Type affecting the target" or "Melee Damage per Status Type affecting the target"
-            {"isFireRateLocked", 0},    // "Fire Rate cannot be modified"
-            {"isMultishotLocked", 0}    // "Multishot cannot be modified"
-        };
 
-        std::unordered_map<std::string, double> statusTypeModifiers = {        // the comment is the string to regex for when parsing a mod description
-            {"Impact", 0},              // "<DT_IMPACT_COLOR>Impact"
-            {"Puncture", 0},            // "<DT_PUNCTURE_COLOR>Puncture"
-            {"Slash", 0},               // "<DT_SLASH_COLOR>Slash"
-            {"Heat", 0},                // "<DT_FIRE_COLOR>Heat"
-            {"Cold", 0},                // "<DT_FREEZE_COLOR>Cold"
-            {"Electricity", 0},            // "<DT_ELECTRICITY_COLOR>Electricity"
-            {"Toxin", 0},               // "<DT_POISON_COLOR>Toxin"
-            {"Blast", 0},               // "<DT_EXPLOSION_COLOR>Blast"
-            {"Corrosive", 0},           // "<DT_CORROSIVE_COLOR>Corrosive"
-            {"Gas", 0},                 // "<DT_GAS_COLOR>Gas"
-            {"Magnetic", 0},            // "<DT_MAGNETIC_COLOR>Magnetic"
-            {"Radiation", 0},           // "<DT_RADIATION_COLOR>Radiation"
-            {"Viral", 0}                // "<DT_VIRAL_COLOR>Viral"
-        };
+        double weaponModifiers[13] = {0};
+        // the comment is the string to regex for when parsing a mod description, and which value in weaponModifiers to affect for it
+        //Entry 0: "Fire Rate" or "Attack Speed"
+        //Entry 1: "Multishot"
+        //Entry 2: "Magazine Capacity"
+        //Entry 3: "Critical Chance"
+        //Entry 4: "Critical Damage"
+        //Entry 5: "Damage" or "Melee Damage"
+        //Entry 6: "Status Duration"
+        //Entry 7: "Status Chance"
+        //Entry 8: "Status Damage"
+        //Entry 9: "Reload Speed"
+        //Entry 10: "Direct Damage per Status Type affecting the target" or "Melee Damage per Status Type affecting the target"
+        //Entry 11: "Fire Rate cannot be modified"
+        //Entry 12: "Multishot cannot be modified"
+
+        double statusTypeModifiers[13] = {0};
+        // the comment is the string to regex for when parsing a mod description
+        //Entry 0: {"Impact", 0},              // "<DT_IMPACT_COLOR>Impact"
+        //Entry 1: {"Puncture", 0},            // "<DT_PUNCTURE_COLOR>Puncture"
+        //Entry 2: {"Slash", 0},               // "<DT_SLASH_COLOR>Slash"
+        //Entry 3: {"Heat", 0},                // "<DT_FIRE_COLOR>Heat"
+        //Entry 4: {"Cold", 0},                // "<DT_FREEZE_COLOR>Cold"
+        //Entry 5: {"Electricity", 0},         // "<DT_ELECTRICITY_COLOR>Electricity"
+        //Entry 6: {"Toxin", 0},               // "<DT_POISON_COLOR>Toxin"
+        //Entry 7: {"Blast", 0},               // "<DT_EXPLOSION_COLOR>Blast"
+        //Entry 8: {"Corrosive", 0},           // "<DT_CORROSIVE_COLOR>Corrosive"
+        //Entry 9: {"Gas", 0},                 // "<DT_GAS_COLOR>Gas"
+        //Entry 10: {"Magnetic", 0},            // "<DT_MAGNETIC_COLOR>Magnetic"
+        //Entry 11: {"Radiation", 0},           // "<DT_RADIATION_COLOR>Radiation"
+        //Entry 12: {"Viral", 0}                // "<DT_VIRAL_COLOR>Viral"
 
 
         // create a base instance of this then add and remove mods as the loop goes, and apply the 'config' setup
@@ -55,20 +56,20 @@ class weaponModConfig
 
         void addMod(weaponMod& currentMod) // make this constructor create a mod based on passed in data. I need to decide how to pass in the data from the json though
         {
-            for (const auto& [modifierName, modifierAmount] : currentMod.weaponModifiers)
+            for (int i = 0; i < 13; i++)
             {
-                this->weaponModifiers[modifierName] += modifierAmount;
+                this->weaponModifiers[i] += currentMod.weaponModifiers[i];
             }
-            for (const auto& [modifierName, modifierAmount] : currentMod.statusTypeModifiers)
+            for (int i = 0; i < 13; i++)
             {
-                this->statusTypeModifiers[modifierName] += modifierAmount;
+                this->statusTypeModifiers[i] += currentMod.statusTypeModifiers[i];
             }
             currentMods.push_back(currentMod.name);
 
             bool isElementalMod = false;
-            for (const auto& [modifierName, modifierAmount] : currentMod.statusTypeModifiers)
+            for (int i = 0; i < 13; i++)
             {
-                if (modifierAmount != 0)
+                if (currentMod.statusTypeModifiers[i] != 0)
                 {
                     isElementalMod = true;
                 }
@@ -81,13 +82,13 @@ class weaponModConfig
         }
         void removeMod(weaponMod& currentMod) // make this constructor create a mod based on passed in data. I need to decide how to pass in the data from the json though
         {
-            for (const auto& [modifierName, modifierAmount] : currentMod.weaponModifiers)
+            for (int i = 0; i < 13; i++)
             {
-                this->weaponModifiers[modifierName] -= modifierAmount;
+                this->weaponModifiers[i] -= currentMod.weaponModifiers[i];
             }
-            for (const auto& [modifierName, modifierAmount] : currentMod.statusTypeModifiers)
+            for (int i = 0; i < 13; i++)
             {
-                this->statusTypeModifiers[modifierName] -= modifierAmount;
+                this->statusTypeModifiers[i] -= currentMod.statusTypeModifiers[i];
             }
 
             // remove from current list of mods

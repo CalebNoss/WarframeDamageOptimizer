@@ -37,23 +37,40 @@ class attackData
 
         std::vector<std::string> forcedProcs = {};
 
-        std::unordered_map<std::string, double> damage = {
+        std::unordered_map<std::string, int> damageTypeNames = {
             {"Impact", 0},
-            {"Puncture", 0},
-            {"Slash", 0},
-            {"Heat", 0},
-            {"Cold", 0},
-            {"Electricity", 0},
-            {"Toxin", 0},
-            {"Blast", 0},
-            {"Corrosive", 0},
-            {"Gas", 0},
-            {"Magnetic", 0},
-            {"Radiation", 0},
-            {"Viral", 0},
-            {"Tau", 0}
-
+            {"Puncture", 1},
+            {"Slash", 2},
+            {"Heat", 3},
+            {"Cold", 4},
+            {"Electricity", 5},
+            {"Toxin", 6},
+            {"Blast", 7},
+            {"Corrosive", 8},
+            {"Gas", 9},           
+            {"Magnetic", 10},
+            {"Radiation", 11},
+            {"Viral", 12},
+            {"Tau", 13}
         };
+
+
+        double damage[14] = {0};
+        // the comment is the string to regex for when parsing a mod description
+        //Entry 0: {"Impact", 0},              // "<DT_IMPACT_COLOR>Impact"
+        //Entry 1: {"Puncture", 0},            // "<DT_PUNCTURE_COLOR>Puncture"
+        //Entry 2: {"Slash", 0},               // "<DT_SLASH_COLOR>Slash"
+        //Entry 3: {"Heat", 0},                // "<DT_FIRE_COLOR>Heat"
+        //Entry 4: {"Cold", 0},                // "<DT_FREEZE_COLOR>Cold"
+        //Entry 5: {"Electricity", 0},         // "<DT_ELECTRICITY_COLOR>Electricity"
+        //Entry 6: {"Toxin", 0},               // "<DT_POISON_COLOR>Toxin"
+        //Entry 7: {"Blast", 0},               // "<DT_EXPLOSION_COLOR>Blast"
+        //Entry 8: {"Corrosive", 0},           // "<DT_CORROSIVE_COLOR>Corrosive"
+        //Entry 9: {"Gas", 0},                 // "<DT_GAS_COLOR>Gas"
+        //Entry 10: {"Magnetic", 0},            // "<DT_MAGNETIC_COLOR>Magnetic"
+        //Entry 11: {"Radiation", 0},           // "<DT_RADIATION_COLOR>Radiation"
+        //Entry 12: {"Viral", 0},                // "<DT_VIRAL_COLOR>Viral"
+        //Entry 13: {"Tau", 0}                  // Something about tau, IDK right now
 
         attackData(
             double newAttackIndex,
@@ -85,16 +102,10 @@ class attackData
             this->burstDelay        =   newBurstDelay;
             this->triggerType       =   newTriggerType;
             this->forcedProcs       =   newForcedProcs;
-            for (const auto& damageType : this->damage)
+            for (const auto& damageType : newDamage)
             {
-                if (newDamage.find(damageType.first) != newDamage.end())
-                {
-                    this->damage[damageType.first] = newDamage[damageType.first];
-                }
-                else
-                {
-                    this->damage[damageType.first] = 0;
-                }
+                int damageTypeIndex = damageTypeNames[damageType.first];
+                this->damage[damageTypeIndex] = damageType.second;
             }
 
             for (const auto& damageType : newDamage)
@@ -103,10 +114,10 @@ class attackData
             }
 
 
-            this->totalIPSDamage = (this->damage["Impact"] + this->damage["Puncture"] + this->damage["Slash"]);
-            this->impactPercent = (this->damage["Impact"] / this->totalIPSDamage);
-            this->puncturePercent = (this->damage["Puncture"] / this->totalIPSDamage);
-            this->slashPercent = (this->damage["Slash"] / this->totalIPSDamage);
+            this->totalIPSDamage = (this->damage[0] + this->damage[1] + this->damage[2]);
+            this->impactPercent = (this->damage[0] / this->totalIPSDamage);
+            this->puncturePercent = (this->damage[1] / this->totalIPSDamage);
+            this->slashPercent = (this->damage[2] / this->totalIPSDamage);
         }
 
         attackData()
@@ -189,34 +200,34 @@ class Weapon
         
         void applyModConfig(weaponModConfig& currentModConfig)
         {
-            this->magazineCapacity = (this->magazineCapacity * (1 + (currentModConfig.weaponModifiers["Magazine Capacity"] / 100)));
-            this->statusDuration = currentModConfig.weaponModifiers["Status Duration"] / 100;
-            this->statusDamage = currentModConfig.weaponModifiers["Status Damage"] / 100;
-            this->gunCOModifier = currentModConfig.weaponModifiers["GunCODamage"] / 100;
-            this->reloadSpeed = (this->reloadSpeed * (1 + (currentModConfig.weaponModifiers["Reload Speed"] / 100)));
-            this->baseDamageModifier = currentModConfig.weaponModifiers["Damage"] / 100;
+            this->magazineCapacity = (this->magazineCapacity * (1 + (currentModConfig.weaponModifiers[2] / 100)));
+            this->statusDuration = currentModConfig.weaponModifiers[6] / 100;
+            this->statusDamage = currentModConfig.weaponModifiers[8] / 100;
+            this->gunCOModifier = currentModConfig.weaponModifiers[10] / 100;
+            this->reloadSpeed = (this->reloadSpeed * (1 + (currentModConfig.weaponModifiers[9] / 100)));
+            this->baseDamageModifier = currentModConfig.weaponModifiers[5] / 100;
             for (auto& currentAttack : this->attackList)
             {
-                if (currentModConfig.weaponModifiers["isFireRateLocked"] == 0)
+                if (currentModConfig.weaponModifiers[11] == 0)
                 {   // if fire rate is not locked, apply mods
-                    currentAttack.fireRate = (currentAttack.fireRate * (1 + (currentModConfig.weaponModifiers["Fire Rate"] / 100)));
+                    currentAttack.fireRate = (currentAttack.fireRate * (1 + (currentModConfig.weaponModifiers[0] / 100)));
                 }
-                if (currentModConfig.weaponModifiers["isMultishotLocked"] == 0)
+                if (currentModConfig.weaponModifiers[12] == 0)
                 {   // if multishot is not locked, apply mods
-                    currentAttack.multishot = (currentAttack.multishot * (1 + (currentModConfig.weaponModifiers["Multishot"] / 100)));
+                    currentAttack.multishot = (currentAttack.multishot * (1 + (currentModConfig.weaponModifiers[1] / 100)));
                 }
-                currentAttack.critChance = (currentAttack.critChance * (1 + (currentModConfig.weaponModifiers["Critical Chance"] / 100)));
-                currentAttack.critMultiplier = (currentAttack.critMultiplier * (1 + (currentModConfig.weaponModifiers["Critical Damage"] / 100)));
-                currentAttack.statusChance = (currentAttack.statusChance * (1 + (currentModConfig.weaponModifiers["Status Chance"] / 100)));
-                for (auto& [damageType, damageAmount] : currentAttack.damage)
+                currentAttack.critChance = (currentAttack.critChance * (1 + (currentModConfig.weaponModifiers[3] / 100)));
+                currentAttack.critMultiplier = (currentAttack.critMultiplier * (1 + (currentModConfig.weaponModifiers[4] / 100)));
+                currentAttack.statusChance = (currentAttack.statusChance * (1 + (currentModConfig.weaponModifiers[7] / 100)));
+                for (int i = 0; i < 13; i++)
                 {
-                    if (damageType != "Impact" && damageType != "Puncture" && damageType != "Slash" && damageType != "Tau")
+                    if (i > 3)  //  if it is not one of the first 3 damage types (IPS)
                     {
-                        currentAttack.damage[damageType] = (currentAttack.damage[damageType] + (currentAttack.totalBaseDamage * ((currentModConfig.statusTypeModifiers[damageType] / 100))));
+                        currentAttack.damage[i] = (currentAttack.damage[i] + (currentAttack.totalBaseDamage * ((currentModConfig.statusTypeModifiers[i] / 100))));
                     }
-                    else if (damageType != "Tau")
+                    else  //  if it is one of the first 3 damage types (IPS)
                     {
-                        currentAttack.damage[damageType] = (currentAttack.damage[damageType] * (1 + (currentModConfig.statusTypeModifiers[damageType] / 100)));
+                        currentAttack.damage[i] = (currentAttack.damage[i] * (1 + (currentModConfig.statusTypeModifiers[i] / 100)));
                     }
                     // no tau mods, so it is not considered here, that damage is always base and not affected by elemental mods
                 }
@@ -225,34 +236,34 @@ class Weapon
         void removeModConfig(weaponModConfig& currentModConfig)
         {
             // make it remove mod effects   -   if still adding instead of removing it is extra indented
-            this->magazineCapacity = (this->magazineCapacity / (1 + (currentModConfig.weaponModifiers["Magazine Capacity"] / 100)));
+            this->magazineCapacity = (this->magazineCapacity / (1 + (currentModConfig.weaponModifiers[2] / 100)));
             this->statusDuration = 0;
             this->statusDamage = 0;
             this->gunCOModifier = 0;
-            this->reloadSpeed = (this->reloadSpeed / (1 + (currentModConfig.weaponModifiers["Reload Speed"] / 100)));
+            this->reloadSpeed = (this->reloadSpeed / (1 + (currentModConfig.weaponModifiers[9] / 100)));
             this->baseDamageModifier = 0;
             for (auto& currentAttack : this->attackList)
             {
-                if (currentModConfig.weaponModifiers["isFireRateLocked"] == 0)
+                if (currentModConfig.weaponModifiers[11] == 0)
                 {   // if fire rate is not locked, apply mods
-                    currentAttack.fireRate = (currentAttack.fireRate / (1 + (currentModConfig.weaponModifiers["Fire Rate"] / 100)));
+                    currentAttack.fireRate = (currentAttack.fireRate / (1 + (currentModConfig.weaponModifiers[0] / 100)));
                 }
-                if (currentModConfig.weaponModifiers["isMultishotLocked"] == 0)
+                if (currentModConfig.weaponModifiers[12] == 0)
                 {   // if multishot is not locked, apply mods
-                    currentAttack.multishot = (currentAttack.multishot / (1 + (currentModConfig.weaponModifiers["Multishot"] / 100)));
+                    currentAttack.multishot = (currentAttack.multishot / (1 + (currentModConfig.weaponModifiers[1] / 100)));
                 }
-                currentAttack.critChance = (currentAttack.critChance / (1 + (currentModConfig.weaponModifiers["Critical Chance"] / 100)));
-                currentAttack.critMultiplier = (currentAttack.critMultiplier / (1 + (currentModConfig.weaponModifiers["Critical Damage"] / 100)));
-                currentAttack.statusChance = (currentAttack.statusChance / (1 + (currentModConfig.weaponModifiers["Status Chance"] / 100)));
-                for (auto& [damageType, damageAmount] : currentAttack.damage)
+                currentAttack.critChance = (currentAttack.critChance / (1 + (currentModConfig.weaponModifiers[3] / 100)));
+                currentAttack.critMultiplier = (currentAttack.critMultiplier / (1 + (currentModConfig.weaponModifiers[4] / 100)));
+                currentAttack.statusChance = (currentAttack.statusChance / (1 + (currentModConfig.weaponModifiers[7] / 100)));
+                for (int i = 0; i < 13; i++)
                 {
-                    if (damageType != "Impact" && damageType != "Puncture" && damageType != "Slash" && damageType != "Tau")
+                    if (i > 3)  //  if it is not one of the first 3 damage types (IPS)
                     {
-                        currentAttack.damage[damageType] = (currentAttack.damage[damageType] - (currentAttack.totalBaseDamage * ((currentModConfig.statusTypeModifiers[damageType] / 100))));
+                        currentAttack.damage[i] = (currentAttack.damage[i] - (currentAttack.totalBaseDamage * ((currentModConfig.statusTypeModifiers[i] / 100))));
                     }
-                    else if (damageType != "Tau")
+                    else  //  if it is one of the first 3 damage types (IPS)
                     {
-                        currentAttack.damage[damageType] = (currentAttack.damage[damageType] / (1 + (currentModConfig.statusTypeModifiers[damageType] / 100)));
+                        currentAttack.damage[i] = (currentAttack.damage[i] / (1 + (currentModConfig.statusTypeModifiers[i] / 100)));
                     }
                     // no tau mods, so it is not considered here, that damage is always base and not affected by elemental mods
                 }

@@ -4,6 +4,7 @@
 #include <vector>
 #include <algorithm>
 #include <sstream>
+#include <array>
 
 class weaponMod
 {
@@ -19,37 +20,38 @@ class weaponMod
 
         bool pruneThis = false;                             // whether the mod should be pruned (ie: better version exists so don't count in damage calcs, or no affect on damage outcome (for example, ammo max mods))
         
-        std::unordered_map<std::string, double> weaponModifiers = {        // the comment is the string to regex for when parsing a mod description
-            {"Fire Rate", 0},           // "Fire Rate" or "Attack Speed"
-            {"Multishot", 0},           // "Multishot"
-            {"Magazine Capacity", 0},   // "Magazine Capacity"
-            {"Critical Chance", 0},     // "Critical Chance"
-            {"Critical Damage", 0},     // "Critical Damage"
-            {"Damage", 0},              // "Damage" or "Melee Damage"
-            {"Status Duration", 0},     // "Status Duration"
-            {"Status Chance", 0},       // "Status Chance"
-            {"Status Damage", 0},       // "Status Damage"
-            {"Reload Speed", 0},        // "Reload Speed"
-            {"GunCODamage", 0},         // "Direct Damage per Status Type affecting the target" or "Melee Damage per Status Type affecting the target"
-            {"isFireRateLocked", 0},    // "Fire Rate cannot be modified"
-            {"isMultishotLocked", 0}    // "Multishot cannot be modified"
-        };
+        double weaponModifiers[13] = {0};
+        // the comment is the string to regex for when parsing a mod description, and which value in weaponModifiers to affect for it
+        //Entry 0: "Fire Rate" or "Attack Speed"
+        //Entry 1: "Multishot"
+        //Entry 2: "Magazine Capacity"
+        //Entry 3: "Critical Chance"
+        //Entry 4: "Critical Damage"
+        //Entry 5: "Damage" or "Melee Damage"
+        //Entry 6: "Status Duration"
+        //Entry 7: "Status Chance"
+        //Entry 8: "Status Damage"
+        //Entry 9: "Reload Speed"
+        //Entry 10: "Direct Damage per Status Type affecting the target" or "Melee Damage per Status Type affecting the target"
+        //Entry 11: "Fire Rate cannot be modified"
+        //Entry 12: "Multishot cannot be modified"
 
-        std::unordered_map<std::string, double> statusTypeModifiers = {        // the comment is the string to regex for when parsing a mod description
-            {"Impact", 0},              // "<DT_IMPACT_COLOR>Impact"
-            {"Puncture", 0},            // "<DT_PUNCTURE_COLOR>Puncture"
-            {"Slash", 0},               // "<DT_SLASH_COLOR>Slash"
-            {"Heat", 0},                // "<DT_FIRE_COLOR>Heat"
-            {"Cold", 0},                // "<DT_FREEZE_COLOR>Cold"
-            {"Electricity", 0},            // "<DT_ELECTRICITY_COLOR>Electricity"
-            {"Toxin", 0},               // "<DT_POISON_COLOR>Toxin"
-            {"Blast", 0},               // "<DT_EXPLOSION_COLOR>Blast"
-            {"Corrosive", 0},           // "<DT_CORROSIVE_COLOR>Corrosive"
-            {"Gas", 0},                 // "<DT_GAS_COLOR>Gas"
-            {"Magnetic", 0},            // "<DT_MAGNETIC_COLOR>Magnetic"
-            {"Radiation", 0},           // "<DT_RADIATION_COLOR>Radiation"
-            {"Viral", 0}                // "<DT_VIRAL_COLOR>Viral"
-        };
+        double statusTypeModifiers[13] = {0};
+        // the comment is the string to regex for when parsing a mod description
+        //Entry 0: {"Impact", 0},              // "<DT_IMPACT_COLOR>Impact"
+        //Entry 1: {"Puncture", 0},            // "<DT_PUNCTURE_COLOR>Puncture"
+        //Entry 2: {"Slash", 0},               // "<DT_SLASH_COLOR>Slash"
+        //Entry 3: {"Heat", 0},                // "<DT_FIRE_COLOR>Heat"
+        //Entry 4: {"Cold", 0},                // "<DT_FREEZE_COLOR>Cold"
+        //Entry 5: {"Electricity", 0},         // "<DT_ELECTRICITY_COLOR>Electricity"
+        //Entry 6: {"Toxin", 0},               // "<DT_POISON_COLOR>Toxin"
+        //Entry 7: {"Blast", 0},               // "<DT_EXPLOSION_COLOR>Blast"
+        //Entry 8: {"Corrosive", 0},           // "<DT_CORROSIVE_COLOR>Corrosive"
+        //Entry 9: {"Gas", 0},                 // "<DT_GAS_COLOR>Gas"
+        //Entry 10: {"Magnetic", 0},            // "<DT_MAGNETIC_COLOR>Magnetic"
+        //Entry 11: {"Radiation", 0},           // "<DT_RADIATION_COLOR>Radiation"
+        //Entry 12: {"Viral", 0}                // "<DT_VIRAL_COLOR>Viral"
+
 
         // Having these be in a separate implementation file was causing weird errors, so they are defined here instead.
 
@@ -119,13 +121,13 @@ class weaponMod
                     {   // because no augment mods the only ones starting with this are cannonade mods (no need to worry about Efficient Beams)
                         if (this->type == "Pistol")
                         {   // pistol has higher stats than others, so seperate that
-                            this->weaponModifiers["Damage"] = 300;
+                            this->weaponModifiers[5] = 300;
                         } else
                         {
-                            this->weaponModifiers["Damage"] = 240;
+                            this->weaponModifiers[5] = 240;
                         }
                         // Find a way to lock fire rate
-                        this->weaponModifiers["isFireRateLocked"]++;
+                        this->weaponModifiers[11]++;
                     } else if (this->description.find("On ") == 0) // finds if the first match is at 0
                     {
                         /// List of mods to parse
@@ -134,7 +136,7 @@ class weaponMod
                         {
                             if (this->type != "Thrown Melee")
                             {   // Berserker Fury
-                                this->weaponModifiers["Fire Rate"] = 70;
+                                this->weaponModifiers[0] = 70;
                             } else
                             {   // Combo Fury
                                 this->pruneThis = true;
@@ -147,10 +149,10 @@ class weaponMod
                         {
                             if (this->type == "Rifle")
                             {   // Catalyzer Link
-                                this->weaponModifiers["Status Chance"] = 60;
+                                this->weaponModifiers[7] = 60;
                             } else
                             {   // Nano-Applicator or Embedded Catalyzer
-                                this->weaponModifiers["Status Chance"] = 90;
+                                this->weaponModifiers[7] = 90;
                             }
                         }
                         /// Hydraulic Crosshairs: "On Headshot:\r\n+135% Critical Chance when Aiming for 9s"
@@ -162,14 +164,16 @@ class weaponMod
                         {
                             if (this->className == "Galvanized")
                             {   // Galvanized Scope and/or Crosshairs
-                                this->weaponModifiers["Critical Chance"] = 320;
+                                this->weaponModifiers[3] = 320;
                             }
                             else if (this->type == "Shotgun")
                             {   // Laser Sight
-                                this->weaponModifiers["Critical Chance"] = 120;
+                                this->weaponModifiers[3] = 120;
                             } else
                             {   // Hydraulic Crosshairs or Argon Scope
-                                this->weaponModifiers["Critical Chance"] = 135;
+                                // only works after weakpoint hit so...
+                                // this->weaponModifiers[3] = 135;
+                                this->pruneThis = true;
                             }
                         }
                         /// Split Flights: "On Hit:\r\n+100% Multishot\r\n-180% Accuracy for 2s. Stacks up to 4x.\r\n(Non-AOE Bows)"
@@ -177,7 +181,7 @@ class weaponMod
                         {   // Narrow Barrel, Targeting Subsystem, Guided Ordnance, Night Stalker, Bounty Hunter, and Apex Predator get removed above | Double Tap and Velox Conclusion are augments so they don't get here either
                             if (this->name == "Split Flights")
                             {   // Split Flights
-                                this->weaponModifiers["Multishot"] = 400;
+                                this->weaponModifiers[1] = 400;
                             } else
                             {   // Plan B
                                 this->pruneThis = true;
@@ -190,13 +194,13 @@ class weaponMod
                         {   // No Archgun so not Deadly Efficiency/Primed Deadly Efficiency | No Augments so not Clip Delegation
                             if (this->type == "Assault Rifle")
                             {   // Spring-Loaded Chamber
-                                this->weaponModifiers["Fire Rate"] = 75;
+                                this->weaponModifiers[0] = 75;
                             } else if (this->type == "Shotgun")
                             {   // Repeater Clip
-                                this->weaponModifiers["Fire Rate"] = 105;
+                                this->weaponModifiers[0] = 105;
                             } else
                             {   // Pressurized Magazine
-                                this->weaponModifiers["Fire Rate"] = 90;
+                                this->weaponModifiers[0] = 90;
                             }
                         }
                         /// Sharpened Bullets: "On Kill:\r\n+75% Critical Damage when Aiming for 9s"
@@ -211,17 +215,17 @@ class weaponMod
                             { // Sharpened Bullets, Shrapnel Shot and Bladed Rounds
                                 if (this->type == "Rifle")
                                 { // Bladed Rounds
-                                    this->weaponModifiers["Critical Damage"] = 120;
+                                    this->weaponModifiers[4] = 120;
                                 } else if (this->type == "Shotgun")
                                 { // Shrapnel Shot
-                                    this->weaponModifiers["Critical Damage"] = 99;
+                                    this->weaponModifiers[4] = 99;
                                 } else
                                 { // Sharpened Bullets
-                                    this->weaponModifiers["Critical Damage"] = 75;
+                                    this->weaponModifiers[4] = 75;
                                 }
                             } else
-                            { // Secondary Wind, Emergent Aftermath and Kill Switch
-                                this->weaponModifiers["Reload Speed"] = 50;
+                            { // Secondary Wind, Emergent Aftermath and Kill Switch         |           conclave exclusives
+                                this->pruneThis = true;
                             }
                         }
                         else
@@ -239,13 +243,13 @@ class weaponMod
                     // Parse power throw as one of two mods that don't have a '%' after the first number, then handle the ones that have %
                     if (this->description.find("+2 ") == 0)
                     { /// Power Throw: "+2 Punch Through\r\nOn Consecutive throw (Max stacks 3):\r\n+100% Throw Damage"
-                        this->weaponModifiers["Damage"] = 300;
+                        this->weaponModifiers[5] = 300;
                     } 
                     
                     // Parse Drifting Contact which also doesn't have a % after the first number
                     else if (this->description.find("+10s ") == 0)
                     { 
-                        this->weaponModifiers["Status Chance"] = 40;
+                        this->weaponModifiers[7] = 40;
                     }
 
                     // parse the other mods
@@ -257,16 +261,16 @@ class weaponMod
                             {   // mods with an initial value of "+100%"
                                 if (this->description[6] == 'M')
                                 {   // Spoiled Strike
-                                    this->weaponModifiers["Damage"] = 100;
-                                    this->weaponModifiers["Fire Rate"] = -20;
+                                    this->weaponModifiers[5] = 100;
+                                    this->weaponModifiers[0] = -20;
                                 }
                                 else if (this->description[6] == 'R')
                                 {   // Primed Tactical Pump
-                                    this->weaponModifiers["Reload Speed"] = 100;
+                                    this->weaponModifiers[9] = 100;
                                 }
                                 else if (this->description[13] == 'D')
                                 {   // Continuous Misery
-                                    this->weaponModifiers["Status Duration"] = 100;
+                                    this->weaponModifiers[6] = 100;
                                 }
                                 else if (this->description[6] == 'C')
                                 {   // Enduring Affliction      -       Only on lifted enemies, so skip this
@@ -279,11 +283,11 @@ class weaponMod
                                 {
                                     if (this->description[7] == 'a')
                                     {   // Primed Ammo Stock
-                                        this->weaponModifiers["Magazine Capacity"] = 110;
+                                        this->weaponModifiers[2] = 110;
                                     }
                                     else if (this->description[7] == 'e')
                                     {   // Sacrificial Pressure     -       For now base values not counting set        -       TODO: work with set mods to scale strength up
-                                        this->weaponModifiers["Damage"] = 110;
+                                        this->weaponModifiers[5] = 110;
                                     }
                                     else if (this->description[7] == 'u')
                                     {
@@ -293,7 +297,7 @@ class weaponMod
                                         }
                                         else if (this->className == "Galvanized")
                                         {   // Galvanized Diffusion or Galvanized Hell 
-                                            this->weaponModifiers["Multishot"] = 230;
+                                            this->weaponModifiers[1] = 230;
                                         }
                                     }
                                 }
@@ -301,44 +305,44 @@ class weaponMod
                                 {
                                     if (this->description[15] == 'C')
                                     {   // Galvanized Steel
-                                        this->weaponModifiers["Critical Chance"] = 110;
-                                        this->weaponModifiers["Critical Damage"] = 120;
+                                        this->weaponModifiers[3] = 110;
+                                        this->weaponModifiers[4] = 120;
                                     }
                                     else if (this->description[15] == 'D')
                                     {   // Primed Ravage or Primed Target Cracker
-                                        this->weaponModifiers["Critical Damage"] = 110;
+                                        this->weaponModifiers[4] = 110;
                                     }
                                 }
                                 else if (this->description[6] == 'S')
                                 {   //  Lasting Sting
-                                    this->weaponModifiers["Status Duration"] = 110;
+                                    this->weaponModifiers[6] = 110;
                                 }
                             }
                             else if (this->description[2] == '2')
                             {   // Mods with starting value of "+120%"
                                 if (this->description[10] == 'I')
                                 {   // impact mod
-                                    this->statusTypeModifiers["Impact"] = 120;
+                                    this->statusTypeModifiers[0] = 120;
                                 }
                                 else if (this->description[10] == 'P')
                                 {   // puncture mod
-                                    this->statusTypeModifiers["Puncture"] = 120;
+                                    this->statusTypeModifiers[1] = 120;
                                 }
                                 else if (this->description[10] == 'S')
                                 {   // slash mod
-                                    this->statusTypeModifiers["Slash"] = 120;
+                                    this->statusTypeModifiers[2] = 120;
                                 }
                                 else if (this->description[15] == 'C')
                                 {   // Critical Chance
-                                    this->weaponModifiers["Critical Chance"] = 120;
+                                    this->weaponModifiers[3] = 120;
                                 }
                                 else if (this->description[15] == 'D')
                                 {   // Critical Damage
-                                    this->weaponModifiers["Critical Damage"] = 120;
+                                    this->weaponModifiers[4] = 120;
                                 }
                                 else if (this->description[7] == 'u')
                                 {   // Multishot
-                                    this->weaponModifiers["Multishot"] = 120;
+                                    this->weaponModifiers[1] = 120;
                                 }
                                 else if (this->description[7] == 'e')
                                 {   // Either Pressure Point, which PPP always beats, or Killing Blow which is only heavy attacks, so pruned for now        -       TODO: add killing blow and stuff
@@ -353,11 +357,11 @@ class weaponMod
                                 }
                                 else if (this->description[3] == '%')
                                 {   // Seeking Fury
-                                    this->weaponModifiers["Reload Speed"] = 15;
+                                    this->weaponModifiers[9] = 15;
                                 }
                                 else if (this->type == "Rifle")
                                 {   // Point Strike
-                                    this->weaponModifiers["Critical Chance"] = 150;
+                                    this->weaponModifiers[3] = 150;
                                 }
                                 else if (this->type == "Melee")
                                 {   //  Maiming Strike      -       Only for slide attacks, so skip it
@@ -370,33 +374,33 @@ class weaponMod
                                 {   //  Primed Elemental Mod
                                     if (this->description[10] == 'E')
                                     {   //  Primed Convulsion
-                                        this->statusTypeModifiers["Electricity"] = 165;
+                                        this->statusTypeModifiers[5] = 165;
                                     }
                                     else if (this->description[10] == 'I')
                                     {   //  Primed Heavy Trauma
-                                        this->statusTypeModifiers["Impact"] = 165;
+                                        this->statusTypeModifiers[0] = 165;
                                     }
                                     else if (this->description[10] == 'P')
                                     {   //  Primed Fever Strike
-                                        this->statusTypeModifiers["Toxin"] = 165;
+                                        this->statusTypeModifiers[6] = 165;
                                     }
                                     else if (this->description[11] == 'I')
                                     {   //  Primed Heated Charge
-                                        this->statusTypeModifiers["Heat"] = 165;
+                                        this->statusTypeModifiers[3] = 165;
                                     }
                                     else if (this->description[11] == 'R')
                                     {   //  Primed Cryo Rounds  or  Primed Chilling Grasp
-                                        this->statusTypeModifiers["Cold"] = 165;
+                                        this->statusTypeModifiers[4] = 165;
                                     }
                                 }
                                 else
                                 {   //  Magnum Force, Primed Pressure Point, Serration, Primed Point Blank, or Heavy Caliber
-                                    this->weaponModifiers["Damage"] = 165;
+                                    this->weaponModifiers[5] = 165;
                                 }
                             }
                             else if (this->description[2] == '8')
                             {   // Primed Pistol Gambit
-                                this->weaponModifiers["Critical Chance"] = 187;
+                                this->weaponModifiers[3] = 187;
                             }
                         }
                         else if (this->description[1] == '2')
@@ -405,19 +409,19 @@ class weaponMod
                             {
                                 if (this->name == "Hornet Strike")
                                 {   // Hornet Strike
-                                    this->weaponModifiers["Damage"] = 220;
+                                    this->weaponModifiers[5] = 220;
                                 }
                                 else
                                 {   // Sacrificial Steel
-                                    this->weaponModifiers["Critical Chance"] = 220;
+                                    this->weaponModifiers[3] = 220;
                                 }
                             }
                             else if (this->description[3] == '%')
                             {   // Mods that start with "+20%"
                                 if (this->description[5] == 'M')
                                 {   //  Wildfire
-                                    this->weaponModifiers["Magazine Capacity"] = 20;
-                                    this->statusTypeModifiers["Heat"] = 60;
+                                    this->weaponModifiers[2] = 20;
+                                    this->statusTypeModifiers[3] = 60;
                                 }
                                 else
                                 {   // Martial Fury     |       Lie in Wait     -       Conclave Exclusive
@@ -426,35 +430,31 @@ class weaponMod
                             }
                             else
                             {   //  Critical Delay, Critical Deceleration, Creeping Bullseye
-                                this->weaponModifiers["Critical Chance"] = 200;
-                                this->weaponModifiers["Fire Rate"] = -20;
+                                this->weaponModifiers[3] = 200;
+                                this->weaponModifiers[0] = -20;
                             }
                         }
                         else if (this->description[1] == '3')
                         {
                             if (this->description[3] != '%')
                             {   // Spectral Serration, or Acuity mod, too specific to use for now   TODO: let user decide this
-                                this->pruneThis;
+                                this->pruneThis = true;
                             }
                             else if (this->description[5] == 'A')
                             {   //  Gladiator Vice or Fury
-                                this->weaponModifiers["Fire Rate"] = 30;
+                                this->weaponModifiers[0] = 30;
                             }
                             else if (this->description[5] == 'M')
                             {   // Slip Magazine, Magazine Warp, 
-                                this->weaponModifiers["Magazine Capacity"] = 30;
+                                this->weaponModifiers[2] = 30;
                                 if (this->description.length() > 23)
-                                {   //  Full Capacity, Loaded Capacity, or Maximum Capacity
-                                    this->weaponModifiers["Reload Speed"] = -15;
+                                {   //  Full Capacity, Loaded Capacity, or Maximum Capacity     |       conclave exclusive
+                                    this->pruneThis = true;
                                 }
                             }
-                            else if (this->description[5] == 'R')
-                            {   //  Fast hands, loose chamber, or loose hatch
-                                this->weaponModifiers["Reload Speed"] = 30;
-                            }
                             else
-                            {   //  Impenetrable Offense
-                                this->pruneThis;
+                            {   //  Fast hands, loose chamber, loose hatch, or Impenetrable offense           |       primed fast hands always better than normal, and others are conclave exclusive
+                                this->pruneThis = true;
                             }
                         }
                         else if (this->description[1] == '4')
@@ -463,41 +463,41 @@ class weaponMod
                             {
                                 if (this->description[5] == 'A')
                                 {   //  Quickening
-                                    this->weaponModifiers["Fire Rate"] = 40;
+                                    this->weaponModifiers[0] = 40;
                                 }
                                 else if (this->description[5] == 'H')
                                 {   //  Focus Energy
-                                    this->statusTypeModifiers["Electricity"] = 60;
+                                    this->statusTypeModifiers[5] = 60;
                                 }
                                 else if (this->description[5] == 'M')
                                 {   //  Ice Storm
-                                    this->weaponModifiers["Magazine Capacity"] = 40;
-                                    this->statusTypeModifiers["Cold"] = 40;
+                                    this->weaponModifiers[2] = 40;
+                                    this->statusTypeModifiers[4] = 40;
                                 }
                                 else if (this->description[5] == 'R')
                                 {   //  Stunning Speed
-                                    this->weaponModifiers["Reload Speed"] = 40;
-                                    this->weaponModifiers["Status Chance"] = 30;
+                                    this->weaponModifiers[9] = 40;
+                                    this->weaponModifiers[7] = 30;
                                 }
                                 else
                                 {   //  Weeping Wounds  |   Blood Rush      TODO: implement combo count and stop pruning these
-                                    this->pruneThis;
+                                    this->pruneThis = true;
                                 }
                             }
                             else if (this->description[2] == '5')
                             {
                                 if (this->type == "Primary")
                                 {   //  Vigilante Fervor
-                                    this->weaponModifiers["Fire Rate"] = 45;
+                                    this->weaponModifiers[0] = 45;
                                 }
                                 else if (this->type == "Pistol")
                                 {   //  Merciless Gunfight
-                                    this->weaponModifiers["Critical Damage"] = 45;
+                                    this->weaponModifiers[4] = 45;
                                 }
                             }
                             else if (this->description[2] == '8')
                             {   //  Quickdraw
-                                this->weaponModifiers["Reload Speed"] = 48;
+                                this->weaponModifiers[9] = 48;
                             }
                         }
                         else if (this->description[1] == '5')
@@ -506,7 +506,7 @@ class weaponMod
                             {
                                 if (this->description[5] == 'R')
                                 {   // Loose Magazine
-                                    this->weaponModifiers["Reload Speed"] = 50;
+                                    this->weaponModifiers[9] = 50;
                                 }
                                 else
                                 {   //  Soaring Strike      |       Galvanized Reflex   TODO: add combo into account for melee, stop pruning galvanized reflex
@@ -517,15 +517,15 @@ class weaponMod
                             {
                                 if (this->description[5] == 'R')
                                 {   //  Primed Fast Hands
-                                    this->weaponModifiers["Reload Speed"] = 55;
+                                    this->weaponModifiers[9] = 55;
                                 }
                                 else if (this->description[5] == 'M')
                                 {   //  Primed Magazine Warp,   Primed Slip Magazine
-                                    this->weaponModifiers["Magazine Capacity"] = 55;
+                                    this->weaponModifiers[2] = 55;
                                 }
                                 else
                                 {   //  Primed Shred, Primed Fury
-                                    this->weaponModifiers["Fire Rate"] = 55;
+                                    this->weaponModifiers[0] = 55;
                                 }
                             }
                         }
@@ -535,131 +535,131 @@ class weaponMod
                             {   //  Elemental 60/60 mods
                                 if (this->description[9] == 'E')
                                 {   //  Electric 60/60 mods
-                                    this->statusTypeModifiers["Electricity"] = 60;
-                                    this->weaponModifiers["Status Chance"] = 60;
+                                    this->statusTypeModifiers[5] = 60;
+                                    this->weaponModifiers[7] = 60;
                                 }
                                 else if (this->description[9] == 'M')
                                 {   //  Magnetic 60/60 mods
-                                    this->statusTypeModifiers["Magnetic"] = 60;
+                                    this->statusTypeModifiers[10] = 60;
                                     if (this->type == "Rifle")
                                     {   //  Magnetic Capacity
-                                        this->weaponModifiers["Magazine Capacity"] = 40;
+                                        this->weaponModifiers[2] = 40;
                                     }
                                     else if (this->type == "Pistol")
                                     {   //  Magnetic Might
-                                        this->weaponModifiers["Critical Damage"] = 40;
+                                        this->weaponModifiers[4] = 40;
                                     }
                                     else if (this->type == "Melee")
                                     {   //  Magnetic Rush
-                                        this->weaponModifiers["Fire Rate"] = 20;
+                                        this->weaponModifiers[0] = 20;
                                     }
                                     else if(this->type == "Shotgun")
                                     {   //  Magnetic Strafe
-                                        this->weaponModifiers["Fire Rate"] = 40;
+                                        this->weaponModifiers[0] = 40;
                                     }
                                 }
                                 else if (this->description[9] == 'P')
                                 {   //  Toxin 60/60 mods
-                                    this->statusTypeModifiers["Toxin"] = 60;
-                                    this->weaponModifiers["Status Chance"] = 60;
+                                    this->statusTypeModifiers[6] = 60;
+                                    this->weaponModifiers[7] = 60;
                                 }
                                 else if (this->description[9] == 'R')
                                 {   //  Radiation 60/60 mods
-                                    this->statusTypeModifiers["Radiation"] = 60;
+                                    this->statusTypeModifiers[11] = 60;
                                     if (this->type == "Rifle")
                                     {   //  Radiated Reload
-                                        this->weaponModifiers["Reload Speed"] = 40;
+                                        this->weaponModifiers[9] = 40;
                                     }
                                     else if (this->type == "Pistol")
                                     {   //  Accelerated Isotope
-                                        this->weaponModifiers["Fire Rate"] = 40;
+                                        this->weaponModifiers[0] = 40;
                                     }
                                     else if(this->type == "Shotgun")
                                     {   //  Atomic Fallout
-                                        this->weaponModifiers["Magazine Capacity"] = 40;
+                                        this->weaponModifiers[2] = 40;
                                     }
                                     //  Focus Radon has heavy attack efficiency which isn't tracked
                                 }
                                 else if (this->description[9] == 'S')
                                 {   //  Rending Strike 60/60 mods
-                                    this->statusTypeModifiers["Slash"] = 60;
-                                    this->statusTypeModifiers["Puncture"] = 80;
+                                    this->statusTypeModifiers[2] = 60;
+                                    this->statusTypeModifiers[1] = 80;
                                 }
                                 else if (this->description[10] == 'I')
                                 {   //  Heat 60/60 mods
-                                    this->statusTypeModifiers["Heat"] = 60;
-                                    this->weaponModifiers["Status Chance"] = 60;
+                                    this->statusTypeModifiers[3] = 60;
+                                    this->weaponModifiers[7] = 60;
                                 }
                                 else if (this->description[10] == 'R')
                                 {   // Cold 60/60 mods
-                                    this->statusTypeModifiers["Cold"] = 60;
+                                    this->statusTypeModifiers[4] = 60;
                                     if (this->name == "Chilling Reload")
                                     {   //  Chilling Reload
-                                        this->weaponModifiers["Reload Speed"] = 40;
+                                        this->weaponModifiers[9] = 40;
                                     }
                                     else
                                     {   //  Vicious Frost, Rime Rounds, Frigid Blast, Frostbite
-                                        this->weaponModifiers["Status Chance"] = 60;
+                                        this->weaponModifiers[7] = 60;
                                     }
                                 }
                             }
                             else if (this->description[5] == 'C')
                             {   //  Critical Damage mods    |   Ravage, Target Cracker, Gladiator Might
-                                this->weaponModifiers["Critical Damage"] = 60;
+                                this->weaponModifiers[4] = 60;
                                 if (this->type == "Rifle")
                                 {   //  Hammer Shot
-                                    this->weaponModifiers["Status Chance"] = 80;
+                                    this->weaponModifiers[7] = 80;
                                 }
                                 else if (this->name == "Hollow Point")
                                 {   //  Hollow Point
-                                    this->weaponModifiers["Damage"] = -15;
+                                    this->weaponModifiers[5] = -15;
                                 }
                             }
                             else if (this->description[5] == 'D')
                             {   //  Blaze
-                                this->weaponModifiers["Damage"] = 60;
-                                this->statusTypeModifiers["Heat"] = 60;
+                                this->weaponModifiers[5] = 60;
+                                this->statusTypeModifiers[3] = 60;
                             }
                             else if (this->description[5] == 'F')
                             {   //  Fire rate mods
-                                this->weaponModifiers["Fire Rate"] = 60;
+                                this->weaponModifiers[0] = 60;
                                 if (this->type == "Pistol")
                                 {   //  Lethal Torrent
-                                    this->weaponModifiers["Multishot"] = 60;
+                                    this->weaponModifiers[1] = 60;
                                 }
                                 else if (this->type == "Shotgun")
                                 {   //  Accelerated Blast
-                                    this->statusTypeModifiers["Puncture"] = 60;
+                                    this->statusTypeModifiers[1] = 60;
                                 }
                             }
                             else if (this->description[6] == 'a')
                             {   //  Magazine Capacity mods
                                 if (this->description[2] == '6')
                                 {   //  Tainted Mag
-                                    this->weaponModifiers["Magazine Capcity"] = 66;
-                                    this->weaponModifiers["Reload Speed"] = -33;
+                                    this->weaponModifiers[2] = 66;
+                                    this->weaponModifiers[9] = -33;
                                 }
                                 else if (this->type == "Shotgun")
                                 {   //  Ammo Stock
-                                    this->weaponModifiers["Magazine Capcity"] = 60;
+                                    this->weaponModifiers[2] = 60;
                                     if (this->description.length() > 25)
                                     {   //  Burdened Magazine
-                                        this->weaponModifiers["Reload Speed"] = -18;
+                                        this->weaponModifiers[9] = -18;
                                     }
                                 }
                                 else
                                 {   //  Tainted Clip
-                                    this->weaponModifiers["Magazine Capcity"] = 60;
-                                    this->weaponModifiers["Reload Speed"] = -30;
+                                    this->weaponModifiers[2] = 60;
+                                    this->weaponModifiers[9] = -30;
                                 }
                             }
                             else if (this->description[6] == 'u')
                             {   //  Vigilante Armaments
-                                this->weaponModifiers["Multishot"] = 60;
+                                this->weaponModifiers[1] = 60;
                             }
                             else if (this->description[5] == 'R')
                             {   //  Tactical Pump
-                                this->weaponModifiers["Reload Speed"] = 60;
+                                this->weaponModifiers[9] = 60;
                             }
                             
                         }
@@ -667,7 +667,7 @@ class weaponMod
                         {
                             if (this->description[2] == '2')
                             {   // Gunslinger
-                                this->weaponModifiers["Fire Rate"] = 72;
+                                this->weaponModifiers[0] = 72;
                             }
                             else if (this->description[2] == '7')
                             {   // Tainted shell        -       No benefit that is tracked, drop it
@@ -680,26 +680,26 @@ class weaponMod
                             {
                                 if (this->description[6] == 'u')
                                 {   //  Galvanized Chamber
-                                    this->weaponModifiers["Multishot"] = 230;
+                                    this->weaponModifiers[1] = 230;
                                 }
                                 else if (this->description[6] == 'e')
                                 {   //  Condition Overload
-                                    this->weaponModifiers["GunCODamage"] = 80;
+                                    this->weaponModifiers[10] = 80;
                                 }
                                 else if (this->type == "Melee")
                                 {   //  Galvanized Elementalist
-                                    this->weaponModifiers["Status Damage"] = 80;
-                                    this->weaponModifiers["Status Chance"] = 120;
+                                    this->weaponModifiers[8] = 80;
+                                    this->weaponModifiers[7] = 120;
                                 }
                                 else if (this->type == "Pistol")
                                 {   //  Galvanized Shot
-                                    this->weaponModifiers["Status Chance"] = 80;
-                                    this->weaponModifiers["GunCODamage"] = 120;
+                                    this->weaponModifiers[7] = 80;
+                                    this->weaponModifiers[10] = 120;
                                 }
                                 else
                                 {   //  Galvanized Aptitude and Galvanized Savvy
-                                    this->weaponModifiers["Status Chance"] = 80;
-                                    this->weaponModifiers["GunCODamage"] = 80;
+                                    this->weaponModifiers[7] = 80;
+                                    this->weaponModifiers[10] = 80;
                                 }
                             }
                             else if (this->description[2] == '5')
@@ -708,7 +708,7 @@ class weaponMod
                             }
                             else if (this->description[2] == '8')
                             {   //  Primed Quickdraw
-                                this->weaponModifiers["Reload Speed"] = 88;
+                                this->weaponModifiers[9] = 88;
                             }                            
                         }
                         else if (this->description[1] == '9')
@@ -717,101 +717,101 @@ class weaponMod
                             {   //  Elemental mods
                                 if (this->description[9] == 'E')
                                 {   //  Electric
-                                    this->statusTypeModifiers["Electricity"] = 90;
+                                    this->statusTypeModifiers[5] = 90;
                                 }
                                 else if (this->description[10] == 'I')
                                 {   //  Heat
-                                    this->statusTypeModifiers["Heat"] = 90;
+                                    this->statusTypeModifiers[3] = 90;
                                 }
                                 else if (this->description[10] == 'R')
                                 {   //  Cold
-                                    this->statusTypeModifiers["Cold"] = 90;
+                                    this->statusTypeModifiers[4] = 90;
                                 }
                                 else if (this->description[10] == 'O')
                                 {   //  Toxin
-                                    this->statusTypeModifiers["Toxin"] = 90;
+                                    this->statusTypeModifiers[6] = 90;
                                 }
                                 else
                                 {
                                     if (this->description[9] == 'I')
                                     {   //  Impact
-                                        this->statusTypeModifiers["Impact"] = 90;
+                                        this->statusTypeModifiers[0] = 90;
                                     }
                                     else if (this->description[9] == 'P')
                                     {   //  Puncture
-                                        this->statusTypeModifiers["Puncture"] = 90;
+                                        this->statusTypeModifiers[1] = 90;
                                     }
                                     else if (this->description[9] == 'S')
                                     {   //  Slash
-                                        this->statusTypeModifiers["Slash"] = 90;
+                                        this->statusTypeModifiers[2] = 90;
                                     }
                                     if (this->setName != "")
                                     {   //  Saxum, Jugulus, or Carnis set
-                                        this->weaponModifiers["Status Chance"] = 60;
+                                        this->weaponModifiers[7] = 60;
                                     }
                                 }
                             }
                             else if (this->description[5] == 'D')
                             {   //  Point Blank, Augur Pact, Vicious Spread
-                                this->weaponModifiers["Damage"] = 90;
+                                this->weaponModifiers[5] = 90;
                             }
                             else if (this->description[5] == 'F')
                             {   //  Shotgun Barrage
-                                this->weaponModifiers["Fire Rate"] = 90;
+                                this->weaponModifiers[0] = 90;
                                 if (this->name != "Shotgun Barrage")
                                 {   //  Frail Momentum, Vile Acceleration, Anemic Agility
-                                    this->weaponModifiers["Damage"] = 15;
+                                    this->weaponModifiers[5] = 15;
                                 }
                             }
                             else if (this->description[6] == 'u')
                             {   //  Split Chamber
-                                this->weaponModifiers["Multishot"] = 90;
+                                this->weaponModifiers[1] = 90;
                             }
                             else if (this->description[5] == 'S')
                             {   //  Status Chance, Status Damage, and Status Duration mods
                                 if (this->description[12] == 'C')
                                 {   //  Rifle Aptitude, Shotgun Savvy, Sure Shot, Melee Prowess
-                                    this->weaponModifiers["Status Chance"] = 90;
+                                    this->weaponModifiers[7] = 90;
                                 }
                                 else if (this->description[13] == 'a')
                                 {   //  Melee Elementalist, Rifle Elementalist      -       Second stat is not a tracked one
-                                    this->weaponModifiers["Status Damage"] = 90;
+                                    this->weaponModifiers[8] = 90;
                                     if (this->type == "Pistol")
                                     {   //  Pistol Elementalist
-                                        this->weaponModifiers["Reload Speed"] = 60;
+                                        this->weaponModifiers[9] = 60;
                                     }
                                     else if (this->type == "Shotgun")
                                     {   //  Shotgun Elementalist
-                                        this->weaponModifiers["Magazine Capacity"] = 60;
+                                        this->weaponModifiers[2] = 60;
                                     }
                                 }
                                 else if (this->description[13] == 'u')
                                 {   //  Augur Seeker, Perpetual Agony, Lingering torment, Hunter Track
-                                    this->weaponModifiers["Status Duration"] = 90;
+                                    this->weaponModifiers[6] = 90;
                                 }
                             }
                             else if (this->description[5] == 'C')
                             {   //  Crit mods
                                 if (this->description[14] == 'C')
                                 {   //  Blunderbuss
-                                    this->weaponModifiers["Critical Chance"] = 90;
+                                    this->weaponModifiers[3] = 90;
                                 }
                                 else if (this->description[14] == 'D')
                                 {
-                                    this->weaponModifiers["Critical Damage"] = 90;
+                                    this->weaponModifiers[4] = 90;
                                 }
                             }
                             else if (this->description[5] == 'M')
                             {
                                 if (this->type == "Dual Daggers")
                                 {   //  Amar's Contempt
-                                    this->weaponModifiers["Damage"] = 90;
-                                    this->statusTypeModifiers["Slash"] = 30;
+                                    this->weaponModifiers[5] = 90;
+                                    this->statusTypeModifiers[2] = 30;
                                 }
                                 else if (this->type == "Polearms")
                                 {   //  Boreal's Contempt
-                                    this->weaponModifiers["Damage"] = 90;
-                                    this->weaponModifiers["Status Damage"] = 60;
+                                    this->weaponModifiers[5] = 90;
+                                    this->weaponModifiers[8] = 60;
                                 }
                             }
                         }
@@ -823,8 +823,8 @@ class weaponMod
                     /// Depleted Reload: "-60% Magazine Capacity\r\n+48% Reload Speed"
                     if (this->description == "-60% Magazine Capacity\r\n+48% Reload Speed")
                     {
-                        this->weaponModifiers["Magazine Capacity"] = -60;
-                        this->weaponModifiers["Reload Speed"] = 48;
+                        this->weaponModifiers[2] = -60;
+                        this->weaponModifiers[9] = 48;
                     }
                     /// Hydraulic Gauge: "-60% Weapon Recoil\r\n-10% Magazine Capacity" | PRUNE THIS - no benefit that is tracked
                     /// Hydraulic Chamber: "-60% Weapon Recoil\r\n-10% Magazine Capacity" | PRUNE THIS - no benefit that is tracked
