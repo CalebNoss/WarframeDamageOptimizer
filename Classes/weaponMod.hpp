@@ -1,5 +1,4 @@
 #pragma once
-#include <unordered_map>
 #include <string>
 #include <vector>
 #include <algorithm>
@@ -20,7 +19,7 @@ class weaponMod
 
         bool pruneThis = false;                             // whether the mod should be pruned (ie: better version exists so don't count in damage calcs, or no affect on damage outcome (for example, ammo max mods))
         
-        double weaponModifiers[13] = {0};
+        std::array<double, 13> weaponModifiers = {0};
         // the comment is the string to regex for when parsing a mod description, and which value in weaponModifiers to affect for it
         //Entry 0: "Fire Rate" or "Attack Speed"
         //Entry 1: "Multishot"
@@ -36,7 +35,7 @@ class weaponMod
         //Entry 11: "Fire Rate cannot be modified"
         //Entry 12: "Multishot cannot be modified"
 
-        double statusTypeModifiers[13] = {0};
+        std::array<double, 13> statusTypeModifiers = {0};
         // the comment is the string to regex for when parsing a mod description
         //Entry 0: {"Impact", 0},              // "<DT_IMPACT_COLOR>Impact"
         //Entry 1: {"Puncture", 0},            // "<DT_PUNCTURE_COLOR>Puncture"

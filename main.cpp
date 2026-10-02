@@ -41,7 +41,7 @@ json loadJsonFile(std::string fileName)
 
 
 
-std::tuple<double, double, double> calculateDPSValues(Weapon& moddedWeapon, attackData& currAttack, std::string& weaponType, Enemy& currEnemy, std::vector<std::string>& damageTypeIndices)
+std::tuple<double, double, double> calculateDPSValues(Weapon& moddedWeapon, attackData& currAttack, std::string& weaponType, Enemy& currEnemy)
 {
     // ---------------------------------------- CALCULATE DAMAGE ----------------------------------------
     // std::cout << "Starting damage calcs\n";
@@ -119,12 +119,11 @@ std::tuple<double, double, double> calculateDPSValues(Weapon& moddedWeapon, atta
     // std::cout << "I calculated the fire rate!\n";
 
     // Calculate status amounts on enemy
-    std::unordered_map<std::string, double>* currStatusCounts = currEnemy.getStatusCounts();
+    std::array<double, 14>* currStatusCounts = currEnemy.getStatusCounts();
     for (int i = 0; i < 14; i++)
     {
         if (currAttack.damage[i] != 0)  // skip if this damage doesn't exist
         {
-            std::string& damageTypeName = damageTypeIndices[i];
             // use each types damage as a proportion of totalDamage to get damage distribution
             // multiply by status chance to get amount applied per hit
             // multiply by multishot to get amount applied per shot
@@ -141,18 +140,18 @@ std::tuple<double, double, double> calculateDPSValues(Weapon& moddedWeapon, atta
             // std::cout << "I got here too!\n";
 
             // multiply by status duration
-            double averageStatusCount = statusAppliedPerSecond * ((currEnemy.getStatusDurations()).at(damageTypeName) * moddedWeapon.statusDuration);
+            double averageStatusCount = statusAppliedPerSecond * ((currEnemy.getStatusDurations()).at(i) * moddedWeapon.statusDuration);
             // round down if above cap
             double finalStatusCount = 0;
-            if (averageStatusCount >= (currEnemy.getStatusCaps()).at(damageTypeName))
+            if (averageStatusCount >= (currEnemy.getStatusCaps()).at(i))
             {
-                finalStatusCount = (currEnemy.getStatusCaps()).at(damageTypeName);
+                finalStatusCount = (currEnemy.getStatusCaps()).at(i);
             } else
             {
                 finalStatusCount = averageStatusCount;
             }
 
-            (*currStatusCounts)[damageTypeName] = finalStatusCount;
+            (*currStatusCounts)[i] = finalStatusCount;
         }
     }
 
@@ -537,38 +536,7 @@ int main()
     weaponModConfig currentModConfig = weaponModConfig();
     // ---------------------------------------- BASE ENEMY INFO ----------------------------------------
     Enemy currEnemy = Enemy();
-    const std::unordered_map<std::string, double> baseStatusCounts = {
-        {"Impact", 0},
-        {"Puncture", 0},
-        {"Slash", 0},
-        {"Heat", 0},
-        {"Cold", 0},
-        {"Electricity", 0},
-        {"Toxin", 0},
-        {"Blast", 0},
-        {"Corrosive", 0},
-        {"Gas", 0},
-        {"Magnetic", 0},
-        {"Radiation", 0},
-        {"Viral", 0},
-        {"Tau", 0}
-        };
-        std::vector<std::string> damageTypeIndices = {
-            "Impact",
-            "Puncture",
-            "Slash",
-            "Heat",
-            "Cold",
-            "Electricity",
-            "Toxin",
-            "Blast",
-            "Corrosive",
-            "Gas",          
-            "Magnetic",
-            "Radiation",
-            "Viral",
-            "Tau"
-        };
+    std::array<double, 14> baseStatusCounts = {0};
 
     unsigned long long totalCalculations = 1;
     for (unsigned long long k = 1; k <= 8; k++)
@@ -599,7 +567,7 @@ int main()
                 continue;   //  skip to next mod in this slot
             }
 
-            currentModConfig.addMod(validMods[modSlotOneIndex]);
+            currentModConfig.addMod(validMods[modSlotOneIndex], modSlotOneIndex);
             // Start lower level loop
             for (int modSlotTwoIndex = modSlotOneIndex + 1; modSlotTwoIndex < validMods.size() - 6; modSlotTwoIndex++)
             {
@@ -617,7 +585,7 @@ int main()
                     continue;   //  skip to next mod in this slot
                 }
 
-                currentModConfig.addMod(validMods[modSlotTwoIndex]);
+                currentModConfig.addMod(validMods[modSlotTwoIndex], modSlotTwoIndex);
                 // Start lower level loop
                 for (int modSlotThreeIndex = modSlotTwoIndex + 1; modSlotThreeIndex < validMods.size() - 5; modSlotThreeIndex++)
                 {
@@ -635,7 +603,7 @@ int main()
                         continue;   //  skip to next mod in this slot
                     }
 
-                    currentModConfig.addMod(validMods[modSlotThreeIndex]);
+                    currentModConfig.addMod(validMods[modSlotThreeIndex], modSlotThreeIndex);
                     // Start lower level loop
                     for (int modSlotFourIndex = modSlotThreeIndex + 1; modSlotFourIndex < validMods.size() - 4; modSlotFourIndex++)
                     {
@@ -653,7 +621,7 @@ int main()
                             continue;   //  skip to next mod in this slot
                         }
 
-                        currentModConfig.addMod(validMods[modSlotFourIndex]);
+                        currentModConfig.addMod(validMods[modSlotFourIndex], modSlotFourIndex);
                         // Start lower level loop
                         for (int modSlotFiveIndex = modSlotFourIndex + 1; modSlotFiveIndex < validMods.size() - 3; modSlotFiveIndex++)
                         {
@@ -671,7 +639,7 @@ int main()
                                 continue;   //  skip to next mod in this slot
                             }
 
-                            currentModConfig.addMod(validMods[modSlotFiveIndex]);
+                            currentModConfig.addMod(validMods[modSlotFiveIndex], modSlotFiveIndex);
                             // Start lower level loop
                             for (int modSlotSixIndex = modSlotFiveIndex + 1; modSlotSixIndex < validMods.size() - 2; modSlotSixIndex++)
                             {
@@ -689,7 +657,7 @@ int main()
                                     continue;   //  skip to next mod in this slot
                                 }
 
-                                currentModConfig.addMod(validMods[modSlotSixIndex]);
+                                currentModConfig.addMod(validMods[modSlotSixIndex], modSlotSixIndex);
                                 // Start lower level loop
                                 for (int modSlotSevenIndex = modSlotSixIndex + 1; modSlotSevenIndex < validMods.size() - 1; modSlotSevenIndex++)
                                 {
@@ -707,7 +675,7 @@ int main()
                                         continue;   //  skip to next mod in this slot
                                     }
 
-                                    currentModConfig.addMod(validMods[modSlotSevenIndex]);
+                                    currentModConfig.addMod(validMods[modSlotSevenIndex], modSlotSevenIndex);
                                     // Start lower level loop
                                     for (int modSlotEightIndex = modSlotSevenIndex + 1; modSlotEightIndex < validMods.size(); modSlotEightIndex++)
                                     {
@@ -725,7 +693,7 @@ int main()
                                             continue;   //  skip to next mod in this slot
                                         }
                         
-                                        currentModConfig.addMod(validMods[modSlotEightIndex]);
+                                        currentModConfig.addMod(validMods[modSlotEightIndex], modSlotEightIndex);
 
                                         // auto weaponBeforeMod = currentWeapon;
 
@@ -755,7 +723,7 @@ int main()
                                             // }
 
                                             // ---------------------------------------- CALCULATE DAMAGE ----------------------------------------
-                                            auto [tempAverageShot, tempAverageBurstDPS, tempAverageSustainedDPS] = calculateDPSValues(currentWeapon, currentAttack, weaponGeneralClass, currEnemy, damageTypeIndices);
+                                            auto [tempAverageShot, tempAverageBurstDPS, tempAverageSustainedDPS] = calculateDPSValues(currentWeapon, currentAttack, weaponGeneralClass, currEnemy);
                                                     // std::cout << "I calculated the DPS!\n";
                                             if (tempAverageShot > averageShot)
                                             {
@@ -782,7 +750,7 @@ int main()
                                         // ---------------------------------------- REMOVE MOD CONFIG --------------------------------------
                                         currentWeapon.removeModConfig(currentModConfig);
 
-                                        currentModConfig.removeMod(validMods[modSlotEightIndex]);    //  Last entry should always be this mod as it is about to move to a lower level
+                                        currentModConfig.removeMod(validMods[modSlotEightIndex], modSlotEightIndex);    //  Last entry should always be this mod as it is about to move to a lower level
                                         // Move up a loop
                                         /*
                                         //  This block checks to see if the mod was different before and after mods were applied (also uncomment the above dfeinition of weaponBeforeMod)
@@ -832,25 +800,25 @@ int main()
                                         }
                                             */
                                     }
-                                    currentModConfig.removeMod(validMods[modSlotSevenIndex]);    //  Last entry should always be this mod as it is about to move to a lower level
+                                    currentModConfig.removeMod(validMods[modSlotSevenIndex], modSlotSevenIndex);    //  Last entry should always be this mod as it is about to move to a lower level
                                     // Move up a loop
                                 }
-                                currentModConfig.removeMod(validMods[modSlotSixIndex]);    //  Last entry should always be this mod as it is about to move to a lower level
+                                currentModConfig.removeMod(validMods[modSlotSixIndex], modSlotSixIndex);    //  Last entry should always be this mod as it is about to move to a lower level
                                 // Move up a loop
                             }
-                            currentModConfig.removeMod(validMods[modSlotFiveIndex]);    //  Last entry should always be this mod as it is about to move to a lower level
+                            currentModConfig.removeMod(validMods[modSlotFiveIndex], modSlotFiveIndex);    //  Last entry should always be this mod as it is about to move to a lower level
                             // Move up a loop
                         }
-                        currentModConfig.removeMod(validMods[modSlotFourIndex]);    //  Last entry should always be this mod as it is about to move to a lower level
+                        currentModConfig.removeMod(validMods[modSlotFourIndex], modSlotFourIndex);    //  Last entry should always be this mod as it is about to move to a lower level
                         // Move up a loop
                     }
-                    currentModConfig.removeMod(validMods[modSlotThreeIndex]);    //  Last entry should always be this mod as it is about to move to a lower level
+                    currentModConfig.removeMod(validMods[modSlotThreeIndex], modSlotThreeIndex);    //  Last entry should always be this mod as it is about to move to a lower level
                     // Move up a loop
                 }
-                currentModConfig.removeMod(validMods[modSlotTwoIndex]);    //  Last entry should always be this mod as it is about to move to a lower level
+                currentModConfig.removeMod(validMods[modSlotTwoIndex], modSlotTwoIndex);    //  Last entry should always be this mod as it is about to move to a lower level
                 // Move up a loop
             }
-            currentModConfig.removeMod(validMods[modSlotOneIndex]);    //  Last entry should always be this mod as it is about to move to a lower level
+            currentModConfig.removeMod(validMods[modSlotOneIndex], modSlotOneIndex);    //  Last entry should always be this mod as it is about to move to a lower level
             // Move up a loop
         }
         std::cout << "For the: " << currentWeapon.name << " the calculated best stats are as follows: Average shot: " << averageShot << ", Average burst DPS: " << averageBurstDPS << ", Average Sustained DPS: " << averageSustainedDPS << std::endl;

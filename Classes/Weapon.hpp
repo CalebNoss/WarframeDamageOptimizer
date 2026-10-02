@@ -55,7 +55,7 @@ class attackData
         };
 
 
-        double damage[14] = {0};
+        std::array<double, 14> damage = {0};
         // the comment is the string to regex for when parsing a mod description
         //Entry 0: {"Impact", 0},              // "<DT_IMPACT_COLOR>Impact"
         //Entry 1: {"Puncture", 0},            // "<DT_PUNCTURE_COLOR>Puncture"
