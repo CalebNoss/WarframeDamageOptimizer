@@ -12,7 +12,7 @@ class weaponModConfig
 
 
     public:
-        std::vector<std::string> currentMods = {};          // indices of current mods (index in reference to validMods)
+        std::vector<int> currentModIndices = {};          // indices of current mods (index in reference to validMods)
         std::vector<int> elementalMods = {};        // indices of current elemental mods (index in reference to validMods)
         
 
@@ -52,52 +52,54 @@ class weaponModConfig
         // create a base instance of this then add and remove mods as the loop goes, and apply the 'config' setup
         // this also lets me save a copy of the vector of mods at the time it outperforms the current best mods
 
-        void addMod(weaponMod& currentMod, int modIndex) // make this constructor create a mod based on passed in data. I need to decide how to pass in the data from the json though
+        [[msvc::noinline]] void addMod(weaponMod& currentMod, int modIndex) // make this constructor create a mod based on passed in data. I need to decide how to pass in the data from the json though
         {
+            bool isElementalMod = false;
             for (int i = 0; i < 13; i++)
             {
                 this->weaponModifiers[i] += currentMod.weaponModifiers[i];
             }
-            for (int i = 0; i < 13; i++)
+            for (int i = 0; i < 3; i++)
             {
                 this->statusTypeModifiers[i] += currentMod.statusTypeModifiers[i];
             }
-            currentMods.push_back(currentMod.name);
-
-            bool isElementalMod = false;
-            for (int i = 0; i < 13; i++)
-            {
+            for (int i = 3; i < 13; i++)
+            {   // split to combine the loops for checking elemental mods, should reduce number of checks by 9 per addition of mod
+                this->statusTypeModifiers[i] += currentMod.statusTypeModifiers[i];
                 if (currentMod.statusTypeModifiers[i] != 0)
                 {
                     isElementalMod = true;
                 }
             }
+            currentModIndices.push_back(currentMod.indexInValidMods);
+
             if (isElementalMod)
             {
                 elementalMods.push_back(modIndex);
             }
         }
-        void removeMod(weaponMod& currentMod, int modIndex) // make this constructor create a mod based on passed in data. I need to decide how to pass in the data from the json though
+        [[msvc::noinline]] void removeMod(weaponMod& currentMod, int modIndex) // make this constructor create a mod based on passed in data. I need to decide how to pass in the data from the json though
         {
+            bool isElementalMod = false;
             for (int i = 0; i < 13; i++)
             {
                 this->weaponModifiers[i] -= currentMod.weaponModifiers[i];
             }
-            for (int i = 0; i < 13; i++)
+            for (int i = 0; i < 3; i++)
             {
                 this->statusTypeModifiers[i] -= currentMod.statusTypeModifiers[i];
             }
-
-            currentMods.pop_back();                 //  remove from current mods (will always be last because of how mods are popped)
-
-            bool isElementalMod = false;
-            for (int i = 0; i < 13; i++)
-            {
+            for (int i = 3; i < 13; i++)
+            {   // split to combine the loops for checking elemental mods, should reduce number of checks by 9 per removal of mod
+                this->statusTypeModifiers[i] -= currentMod.statusTypeModifiers[i];
                 if (currentMod.statusTypeModifiers[i] != 0)
                 {
                     isElementalMod = true;
                 }
             }
+
+            currentModIndices.pop_back();                 //  remove from current mods (will always be last because of how mods are popped)
+
             if (isElementalMod)
             {
                 this->elementalMods.pop_back();     //  remove from elemental mods (will always be last because of how mods are popped)

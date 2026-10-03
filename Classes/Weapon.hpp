@@ -198,74 +198,68 @@ class Weapon
         }
 
         
-        void applyModConfig(weaponModConfig& currentModConfig)
+        [[msvc::noinline]] void applyModConfig(weaponModConfig& currentModConfig)
         {
-            this->magazineCapacity = (this->magazineCapacity * (1 + (currentModConfig.weaponModifiers[2] / 100)));
-            this->statusDuration = currentModConfig.weaponModifiers[6] / 100;
-            this->statusDamage = currentModConfig.weaponModifiers[8] / 100;
-            this->gunCOModifier = currentModConfig.weaponModifiers[10] / 100;
-            this->reloadSpeed = (this->reloadSpeed * (1 + (currentModConfig.weaponModifiers[9] / 100)));
-            this->baseDamageModifier = currentModConfig.weaponModifiers[5] / 100;
+            this->magazineCapacity = (this->magazineCapacity * (1 + (currentModConfig.weaponModifiers[2] * 0.01)));
+            this->statusDuration = currentModConfig.weaponModifiers[6] * 0.01;
+            this->statusDamage = currentModConfig.weaponModifiers[8] * 0.01;
+            this->gunCOModifier = currentModConfig.weaponModifiers[10] * 0.01;
+            this->reloadSpeed = (this->reloadSpeed * (1 + (currentModConfig.weaponModifiers[9] * 0.01)));
+            this->baseDamageModifier = currentModConfig.weaponModifiers[5] * 0.01;
             for (auto& currentAttack : this->attackList)
             {
                 if (currentModConfig.weaponModifiers[11] == 0)
                 {   // if fire rate is not locked, apply mods
-                    currentAttack.fireRate = (currentAttack.fireRate * (1 + (currentModConfig.weaponModifiers[0] / 100)));
+                    currentAttack.fireRate = (currentAttack.fireRate * (1 + (currentModConfig.weaponModifiers[0] * 0.01)));
                 }
                 if (currentModConfig.weaponModifiers[12] == 0)
                 {   // if multishot is not locked, apply mods
-                    currentAttack.multishot = (currentAttack.multishot * (1 + (currentModConfig.weaponModifiers[1] / 100)));
+                    currentAttack.multishot = (currentAttack.multishot * (1 + (currentModConfig.weaponModifiers[1] * 0.01)));
                 }
-                currentAttack.critChance = (currentAttack.critChance * (1 + (currentModConfig.weaponModifiers[3] / 100)));
-                currentAttack.critMultiplier = (currentAttack.critMultiplier * (1 + (currentModConfig.weaponModifiers[4] / 100)));
-                currentAttack.statusChance = (currentAttack.statusChance * (1 + (currentModConfig.weaponModifiers[7] / 100)));
-                for (int i = 0; i < 13; i++)
-                {
-                    if (i > 3)  //  if it is not one of the first 3 damage types (IPS)
-                    {
-                        currentAttack.damage[i] = (currentAttack.damage[i] + (currentAttack.totalBaseDamage * ((currentModConfig.statusTypeModifiers[i] / 100))));
-                    }
-                    else  //  if it is one of the first 3 damage types (IPS)
-                    {
-                        currentAttack.damage[i] = (currentAttack.damage[i] * (1 + (currentModConfig.statusTypeModifiers[i] / 100)));
-                    }
-                    // no tau mods, so it is not considered here, that damage is always base and not affected by elemental mods
+                currentAttack.critChance = (currentAttack.critChance * (1 + (currentModConfig.weaponModifiers[3] * 0.01)));
+                currentAttack.critMultiplier = (currentAttack.critMultiplier * (1 + (currentModConfig.weaponModifiers[4] * 0.01)));
+                currentAttack.statusChance = (currentAttack.statusChance * (1 + (currentModConfig.weaponModifiers[7] * 0.01)));
+                double totalBaseDamage = currentAttack.totalBaseDamage;
+                for (int i = 0; i < 3; i++)
+                {   // for IPS damage types
+                    currentAttack.damage[i] = (currentAttack.damage[i] * (1 + (currentModConfig.statusTypeModifiers[i] * 0.01)));
+                }
+                for (int i = 3; i < 13; i++)
+                {   // for non IPS types (other than Tau, no mod for that exists (yet))
+                    currentAttack.damage[i] = (currentAttack.damage[i] + (totalBaseDamage * ((currentModConfig.statusTypeModifiers[i] * 0.01))));
                 }
             }
         }
-        void removeModConfig(weaponModConfig& currentModConfig)
+        [[msvc::noinline]] void removeModConfig(weaponModConfig& currentModConfig)
         {
             // make it remove mod effects   -   if still adding instead of removing it is extra indented
-            this->magazineCapacity = (this->magazineCapacity / (1 + (currentModConfig.weaponModifiers[2] / 100)));
+            this->magazineCapacity = (this->magazineCapacity * (1 / (1 + (currentModConfig.weaponModifiers[2] * 0.01))));
             this->statusDuration = 0;
             this->statusDamage = 0;
             this->gunCOModifier = 0;
-            this->reloadSpeed = (this->reloadSpeed / (1 + (currentModConfig.weaponModifiers[9] / 100)));
+            this->reloadSpeed = (this->reloadSpeed * (1 / (1 + (currentModConfig.weaponModifiers[9] * 0.01))));
             this->baseDamageModifier = 0;
             for (auto& currentAttack : this->attackList)
             {
                 if (currentModConfig.weaponModifiers[11] == 0)
                 {   // if fire rate is not locked, apply mods
-                    currentAttack.fireRate = (currentAttack.fireRate / (1 + (currentModConfig.weaponModifiers[0] / 100)));
+                    currentAttack.fireRate = (currentAttack.fireRate * (1 / (1 + (currentModConfig.weaponModifiers[0] * 0.01))));
                 }
                 if (currentModConfig.weaponModifiers[12] == 0)
                 {   // if multishot is not locked, apply mods
-                    currentAttack.multishot = (currentAttack.multishot / (1 + (currentModConfig.weaponModifiers[1] / 100)));
+                    currentAttack.multishot = (currentAttack.multishot * (1 / (1 + (currentModConfig.weaponModifiers[1] * 0.01))));
                 }
-                currentAttack.critChance = (currentAttack.critChance / (1 + (currentModConfig.weaponModifiers[3] / 100)));
-                currentAttack.critMultiplier = (currentAttack.critMultiplier / (1 + (currentModConfig.weaponModifiers[4] / 100)));
-                currentAttack.statusChance = (currentAttack.statusChance / (1 + (currentModConfig.weaponModifiers[7] / 100)));
-                for (int i = 0; i < 13; i++)
-                {
-                    if (i > 3)  //  if it is not one of the first 3 damage types (IPS)
-                    {
-                        currentAttack.damage[i] = (currentAttack.damage[i] - (currentAttack.totalBaseDamage * ((currentModConfig.statusTypeModifiers[i] / 100))));
-                    }
-                    else  //  if it is one of the first 3 damage types (IPS)
-                    {
-                        currentAttack.damage[i] = (currentAttack.damage[i] / (1 + (currentModConfig.statusTypeModifiers[i] / 100)));
-                    }
-                    // no tau mods, so it is not considered here, that damage is always base and not affected by elemental mods
+                currentAttack.critChance = (currentAttack.critChance * (1 / (1 + (currentModConfig.weaponModifiers[3] * 0.01))));
+                currentAttack.critMultiplier = (currentAttack.critMultiplier * (1 / (1 + (currentModConfig.weaponModifiers[4] * 0.01))));
+                currentAttack.statusChance = (currentAttack.statusChance * (1 / (1 + (currentModConfig.weaponModifiers[7] * 0.01))));
+                double totalBaseDamage = currentAttack.totalBaseDamage;
+                for (int i = 0; i < 3; i++)
+                {   // for IPS damage types
+                    currentAttack.damage[i] = (currentAttack.damage[i] * (1 / (1 + (currentModConfig.statusTypeModifiers[i] * 0.01))));
+                }
+                for (int i = 3; i < 13; i++)
+                {   // for non IPS types (other than Tau, no mod for that exists (yet))
+                    currentAttack.damage[i] = (currentAttack.damage[i] - (totalBaseDamage * ((currentModConfig.statusTypeModifiers[i] * 0.01))));
                 }
             }
         }

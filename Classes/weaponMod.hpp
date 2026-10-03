@@ -15,7 +15,9 @@ class weaponMod
         std::string description = "";                       // description of mod               (always)
         std::string setName = "";                           // set name                         (if it exists)
         std::vector<std::string> incompatibleMods = {};     // incompatible mods                (if they exist)
+        std::vector<int> incompatibleModIndices = {};       // incompatible mod indices         (if they exist)
         std::string className = "";                         // class name                       (if it exists)
+        int indexInValidMods = -1;
 
         bool pruneThis = false;                             // whether the mod should be pruned (ie: better version exists so don't count in damage calcs, or no affect on damage outcome (for example, ammo max mods))
         
@@ -73,7 +75,7 @@ class weaponMod
 
 
 
-        weaponMod(std::string newName, std::string newType, std::string newDescription, std::string newSetName, std::string newClassName, std::vector<std::string> newIncompatibilityTags, std::vector<std::string> newIncompatibleMods, std::vector<std::string> newUpgradeTypes) // make this constructor create a mod based on passed in data. I need to decide how to pass in the data from the json though
+        weaponMod(std::string newName, std::string newType, std::string newDescription, std::string newSetName, std::string newClassName, std::vector<std::string> newIncompatibilityTags, std::vector<std::string> newIncompatibleMods, std::vector<std::string> newUpgradeTypes, int& currentValidModsIndex) // make this constructor create a mod based on passed in data. I need to decide how to pass in the data from the json though
         {
             this->name = newName;
             this->type = newType;
@@ -834,6 +836,11 @@ class weaponMod
                         this->pruneThis = true;
                     }
                 }
+            }
+            if (this->pruneThis == false)
+            {
+                this->indexInValidMods = currentValidModsIndex;
+                currentValidModsIndex++;
             }
         }
 };
