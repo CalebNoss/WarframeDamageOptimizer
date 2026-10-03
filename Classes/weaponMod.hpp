@@ -161,19 +161,19 @@ class weaponMod
                         /// Galvanized Crosshairs: "On Headshot:\r\n+120% Critical Chance when Aiming for 12s\r\nOn Headshot Kill:\r\n+40% Critical Chance when Aiming for 12s. Stacks up to 5x."
                         else if (this->description.find("On Head") == 0)
                         {
-                            if (this->className == "Galvanized")
-                            {   // Galvanized Scope and/or Crosshairs
-                                this->weaponModifiers[3] = 320;
-                            }
-                            else if (this->type == "Shotgun")
-                            {   // Laser Sight
-                                this->weaponModifiers[3] = 120;
-                            } else
-                            {   // Hydraulic Crosshairs or Argon Scope
-                                // only works after weakpoint hit so...
-                                // this->weaponModifiers[3] = 135;
-                                this->pruneThis = true;
-                            }
+                            // all on headshots, too specific
+                            this->pruneThis = true;
+                            // if (this->className == "Galvanized")
+                            // {   // Galvanized Scope and/or Galvanized Crosshairs
+                            //     this->weaponModifiers[3] = 320;
+                            // }
+                            // else if (this->type == "Shotgun")
+                            // {   // Laser Sight
+                            //     this->weaponModifiers[3] = 120;
+                            // } else
+                            // {   // Hydraulic Crosshairs or Argon Scope
+                            //     this->weaponModifiers[3] = 135;
+                            // }
                         }
                         /// Split Flights: "On Hit:\r\n+100% Multishot\r\n-180% Accuracy for 2s. Stacks up to 4x.\r\n(Non-AOE Bows)"
                         else if (this->description.find("On Hit") == 0)

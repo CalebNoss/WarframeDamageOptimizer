@@ -51,7 +51,7 @@ std::tuple<double, double, double> calculateDPSValues(Weapon& moddedWeapon, atta
     double multishotValue = 0;
 
 
-    for (const auto& damageType : currAttack.damage)
+    for (auto& damageType : currAttack.damage)
     {
         totalDamage += damageType;
         // if (damageType.second != 0)
@@ -67,6 +67,9 @@ std::tuple<double, double, double> calculateDPSValues(Weapon& moddedWeapon, atta
     {
         multishotValue = currAttack.multishot;
     }
+
+
+    
 
     // std::cout<< "The total damage is: " << totalDamage << std::endl;
 
@@ -118,6 +121,8 @@ std::tuple<double, double, double> calculateDPSValues(Weapon& moddedWeapon, atta
     
     // std::cout << "I calculated the fire rate!\n";
 
+    int distinctStatusCount = 0;
+
     // Calculate status amounts on enemy
     std::array<double, 14>* currStatusCounts = currEnemy.getStatusCounts();
     for (int i = 0; i < 14; i++)
@@ -151,7 +156,46 @@ std::tuple<double, double, double> calculateDPSValues(Weapon& moddedWeapon, atta
                 finalStatusCount = averageStatusCount;
             }
 
+            if (finalStatusCount >= 0)
+            {
+                distinctStatusCount++;
+            }
+
             (*currStatusCounts)[i] = finalStatusCount;
+        }
+    }
+
+    double baseDMGModValue = (1 + (moddedWeapon.baseDamageModifier / 100));
+    double gunCOModValue = 0;
+    if (currAttack.shotType == "Hit-Scan")
+    {
+        // normal addative gunCO;
+        baseDMGModValue += ((moddedWeapon.gunCOModifier / 100) * distinctStatusCount);
+    }
+    else if (currAttack.shotType == "Projectile")
+    {
+        if (moddedWeapon.className == "Bow")
+        {
+            // gunCO apples to uncharged shot, so half the bonus (charged shot is 2x uncharged, this should balance it)
+            gunCOModValue += ((moddedWeapon.gunCOModifier / 100) / 2);
+        }
+        else
+        {
+            gunCOModValue += (moddedWeapon.gunCOModifier / 100);
+        }
+    }
+
+    if (gunCOModValue != 0)
+    {
+        totalDamage = 0;
+        for (auto& damageType : currAttack.damage)
+        {
+            damageType = damageType * (1 + (gunCOModValue * distinctStatusCount));
+            totalDamage += damageType;
+            // if (damageType.second != 0)
+            // {
+            //     std::cout << "The " << damageType.first << " damage is: " << damageType.second << std::endl;
+            // }
         }
     }
 
@@ -424,13 +468,6 @@ int main()
 
     nlohmann::json currentChosenWeapon = selectedWeaponType[weaponName];
 
-    double averageShot = 0;
-    double averageBurstDPS = 0;
-    double averageSustainedDPS = 0;
-    std::vector<std::string> singleShotMods = {};
-    std::vector<std::string> burstDPSMods = {};
-    std::vector<std::string> sustainedDPSMods = {};
-
 
     // filter to only check valid mod options
     int currentModIndex = 0;
@@ -530,6 +567,27 @@ int main()
             attackList                                      //  attackList
         ));
     // }
+
+    
+
+    //  outer layer is for each attack, inner layer is for each type of DPS, then the innermost is the list of mods
+    std::vector<std::vector<std::vector<std::string>>> optimalModChoices = {};
+    //  outer layer is for each attack, inner layer is for each type of DPS
+    std::vector<std::vector<double>> optimalStats = {};
+    for (int i = 0; i < weaponList.at(0).attackList.size(); i++)
+    {
+        std::vector<std::string> singleShotMods = {};
+        std::vector<std::string> burstDPSMods = {};
+        std::vector<std::string> sustainedDPSMods = {};
+        // first vector is a list of the best mods for single shot dps, second vector is a list of the best mods for burst dps, third vector is a list of the bestmods for sustained dps
+        std::vector<std::vector<std::string>> attacksModLayouts = {singleShotMods, burstDPSMods, sustainedDPSMods};
+        optimalModChoices.push_back(attacksModLayouts);
+
+        // first entry is single shot average damage, second entry is burst dps, and third entry is sustained dps
+        std::vector<double> attacksStats = {0, 0, 0};
+        optimalStats.push_back(attacksStats);
+    }
+
 
 
     // ---------------------------------------- BASE MOD CONFIG ----------------------------------------
@@ -725,20 +783,20 @@ int main()
                                             // ---------------------------------------- CALCULATE DAMAGE ----------------------------------------
                                             auto [tempAverageShot, tempAverageBurstDPS, tempAverageSustainedDPS] = calculateDPSValues(currentWeapon, currentAttack, weaponGeneralClass, currEnemy);
                                                     // std::cout << "I calculated the DPS!\n";
-                                            if (tempAverageShot > averageShot)
+                                            if (tempAverageShot > optimalStats.at(currentAttack.attackIndex - 1).at(0))
                                             {
-                                                averageShot = tempAverageShot;
-                                                singleShotMods = currentModConfig.currentMods;
+                                                optimalStats[currentAttack.attackIndex - 1][0] = tempAverageShot;
+                                                optimalModChoices[currentAttack.attackIndex - 1][0] = currentModConfig.currentMods;
                                             }
-                                            if (tempAverageBurstDPS > averageBurstDPS)
+                                            if (tempAverageBurstDPS > optimalStats.at(currentAttack.attackIndex - 1).at(1))
                                             {
-                                                averageBurstDPS = tempAverageBurstDPS;
-                                                burstDPSMods = currentModConfig.currentMods;
+                                                optimalStats[currentAttack.attackIndex - 1][1] = tempAverageBurstDPS;
+                                                optimalModChoices[currentAttack.attackIndex - 1][1] = currentModConfig.currentMods;
                                             }
-                                            if (tempAverageSustainedDPS > averageSustainedDPS)
+                                            if (tempAverageSustainedDPS > optimalStats.at(currentAttack.attackIndex - 1).at(2))
                                             {
-                                                averageSustainedDPS = tempAverageSustainedDPS;
-                                                sustainedDPSMods = currentModConfig.currentMods;
+                                                optimalStats[currentAttack.attackIndex - 1][2] = tempAverageSustainedDPS;
+                                                optimalModChoices[currentAttack.attackIndex - 1][2] = currentModConfig.currentMods;
                                             }
                                         }
 
@@ -821,7 +879,25 @@ int main()
             currentModConfig.removeMod(validMods[modSlotOneIndex], modSlotOneIndex);    //  Last entry should always be this mod as it is about to move to a lower level
             // Move up a loop
         }
-        std::cout << "For the: " << currentWeapon.name << " the calculated best stats are as follows: Average shot: " << averageShot << ", Average burst DPS: " << averageBurstDPS << ", Average Sustained DPS: " << averageSustainedDPS << std::endl;
+        for (int i = 0; i < currentWeapon.attackList.size(); i++)
+        {
+            std::cout << "For the: " << currentWeapon.name << "'s " << currentWeapon.attackList[i].attackName << " attack, the calculated best stats are as follows: Average shot: " << optimalStats.at(i).at(0) << ", Average burst DPS: " << optimalStats.at(i).at(1) << ", Average Sustained DPS: " << optimalStats.at(i).at(2) << std::endl;
+            std::cout << "Using the following mods for single shot: \n";
+            for (int j = 0; j < 8; j++)
+            {
+                std::cout << optimalModChoices.at(i).at(0).at(j) << "\n";
+            }
+            std::cout << "Using the following mods for burst DPS: \n";
+            for (int j = 0; j < 8; j++)
+            {
+                std::cout << optimalModChoices.at(i).at(1).at(j) << "\n";
+            }
+            std::cout << "Using the following mods for sustained DPS: \n";
+            for (int j = 0; j < 8; j++)
+            {
+                std::cout << optimalModChoices.at(i).at(2).at(j) << "\n";
+            }
+        }
     }
     
     // waits for user to hit enter to leave program
