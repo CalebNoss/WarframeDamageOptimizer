@@ -5,6 +5,7 @@
 #include <sstream>
 #include <bit>
 #include "weaponMod.hpp"
+#include "weaponArcane.hpp"
 
 class weaponModConfig
 {
@@ -52,6 +53,9 @@ class weaponModConfig
         uint16_t modifiedStatusTypeIndicesMask = 0;
         std::array<uint16_t, 8> modStatusTypeMasks = {};
 
+        bool arcaneBuff = false;
+        int activeArcaneIndex = -1;
+
         // create a base instance of this then add and remove mods as the loop goes, and apply the 'config' setup
         // this also lets me save a copy of the vector of mods at the time it outperforms the current best mods
 
@@ -67,6 +71,39 @@ class weaponModConfig
             modStatusTypeMasks[7])
             ;
         }
+
+        [[msvc::noinline]] void addArcane(weaponArcane& currentArcane) // make this constructor create a mod based on passed in data. I need to decide how to pass in the data from the json though
+        {
+            if (currentArcane.modifiesWeapon)
+            {
+                uint16_t indicesToCheck = currentArcane.weaponModifierMask;
+                while (indicesToCheck)
+                {
+                    int modifiedStatIndex = std::countr_zero(indicesToCheck);
+                    this->weaponModifiers[modifiedStatIndex] += currentArcane.weaponModifiers[modifiedStatIndex];
+                    indicesToCheck &= indicesToCheck - 1;   //  this gets the result only where these match, subtracting one makes the lowest valued bit shift, so it doesn't match, so it removes the lowest bit set to 1
+                }
+            }
+        }
+        [[msvc::noinline]] void removeArcane(weaponArcane& currentArcane) // make this constructor create a mod based on passed in data. I need to decide how to pass in the data from the json though
+        {
+            if (currentArcane.modifiesWeapon)
+            {
+                uint16_t indicesToCheck = currentArcane.weaponModifierMask;
+                while (indicesToCheck)
+                {
+                    int modifiedStatIndex = std::countr_zero(indicesToCheck);
+                    this->weaponModifiers[modifiedStatIndex] -= currentArcane.weaponModifiers[modifiedStatIndex];
+                    indicesToCheck &= indicesToCheck - 1;   //  this gets the result only where these match, subtracting one makes the lowest valued bit shift, so it doesn't match, so it removes the lowest bit set to 1
+                }
+            }
+            else
+            {
+                this->arcaneBuff = true;
+                this->activeArcaneIndex = currentArcane.arcaneModifierIndex;
+            }
+        }
+        
 
         [[msvc::noinline]] void addMod(weaponMod& currentMod, int modIndex) // make this constructor create a mod based on passed in data. I need to decide how to pass in the data from the json though
         {

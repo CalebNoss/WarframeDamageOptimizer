@@ -10,7 +10,6 @@
 #include <string>
 #include <cmath>
 #include <algorithm>
-#include <omp.h>
 // json loading thanks to nlohmann, further info in nlohmann/json.hpp
 
 using json = nlohmann::json;
@@ -43,7 +42,7 @@ json loadJsonFile(std::string fileName)
 
 
 
-std::tuple<double, double, double> calculateDPSValues(Weapon& moddedWeapon, attackData& currAttack, std::string& weaponType, Enemy& currEnemy)
+std::tuple<double, double, double> calculateDPSValues(Weapon& moddedWeapon, attackData& currAttack, int weaponTypeIndex, Enemy& currEnemy)
 {
     // ---------------------------------------- CALCULATE DAMAGE ----------------------------------------
     // std::cout << "Starting damage calcs\n";
@@ -83,20 +82,26 @@ std::tuple<double, double, double> calculateDPSValues(Weapon& moddedWeapon, atta
     double effectiveFireRate = 0;
 
 
-    std::string triggerType = "";
-    if (weaponType.at(0) == 'P' || weaponType.at(0) == 'S') //  Primary ||  Secondary
+    if (weaponTypeIndex != 2) // If not melee then:  Primary ||  Secondary
     {
-        if (currAttack.triggerType != "") // use particular attacks trigger value if it exists, else use weapons trigger value
+        char triggerTypeStartingChar = currAttack.triggerType.at(0);
+        if (triggerTypeStartingChar == 'S' || // Semi-Auto
+        triggerTypeStartingChar == 'D' || // Duplex
+        triggerTypeStartingChar == 'H')   // Held
         {
-            triggerType = currAttack.triggerType;
+            effectiveFireRate = currAttack.fireRate;
         }
-        else if (moddedWeapon.triggerType != "")
+        else if (triggerTypeStartingChar == 'C')    // Charge
         {
-            triggerType = moddedWeapon.triggerType;
+            effectiveFireRate = (1 / (moddedWeapon.reloadRate + (1 / currAttack.fireRate)));
         }
-        else
+        else if (currAttack.triggerType.size() == 4)   // Auto
         {
-            std::cout << "ABORT, Neither the attack nor weapon have a 'Trigger' type" << std::endl;
+            effectiveFireRate = currAttack.fireRate;
+        }
+        else // Burst or Auto-Burst
+        {
+            effectiveFireRate = ((currAttack.burstCount) / ((1 / currAttack.fireRate) + ((currAttack.burstCount - 1) * currAttack.burstDelay)));
         }
     }
     else    //  Melee
@@ -104,25 +109,7 @@ std::tuple<double, double, double> calculateDPSValues(Weapon& moddedWeapon, atta
         effectiveFireRate = currAttack.fireRate;
     }
     
-    char triggerTypeStartingChar = triggerType.at(0);
-    if (triggerTypeStartingChar == 'S' || // Semi-Auto
-    triggerTypeStartingChar == 'D' || // Duplex
-    triggerTypeStartingChar == 'H')   // Held
-    {
-        effectiveFireRate = currAttack.fireRate;
-    }
-    else if (triggerTypeStartingChar == 'C')    // Charge
-    {
-        effectiveFireRate = (1 / (moddedWeapon.reloadRate + (1 / currAttack.fireRate)));
-    }
-    else if (triggerType.size() == 4)   // Auto
-    {
-        effectiveFireRate = currAttack.fireRate;
-    }
-    else // Burst or Auto-Burst
-    {
-        effectiveFireRate = ((currAttack.burstCount) / ((1 / currAttack.fireRate) + ((currAttack.burstCount - 1) * currAttack.burstDelay)));
-    }
+    
     
     // std::cout << "I calculated the fire rate!\n";
 
@@ -217,7 +204,7 @@ std::tuple<double, double, double> calculateDPSValues(Weapon& moddedWeapon, atta
     double percentOfTimeShooting = 0;
 
     // Gun DPS
-    if (weaponType.at(0) == 'P' || weaponType.at(0) == 'S') //  Primary ||  Secondary
+    if (weaponTypeIndex != 2) // If not melee, then:  Primary ||  Secondary
     {
         if (currAttack.ammoCost != 0)
         {
@@ -252,7 +239,7 @@ std::tuple<double, double, double> calculateDPSValues(Weapon& moddedWeapon, atta
         averageSustainedDPS = averageBurstDPS * percentOfTimeShooting;
     }
     // Melee DPS
-    else if (weaponType == "Melee")
+    else if (weaponTypeIndex == 2)   // if melee
     {
         // Going to have to add a slot for combo mods to choose from for the melee weapons, then i need to update this
         // TODO: update this calculation once combo mod can be chosen
@@ -379,9 +366,25 @@ int main()
             std::cout << "Invalid! Please check capitalization and enter again" << std::endl;
         }
     }
+
+    int weaponGeneralClassIndex = -1; // 0 == Primary   |   1 == Secondary  |   2 == Melee
+    if (weaponGeneralClass.at(0) == 'P')
+    {
+        weaponGeneralClassIndex = 0;
+    }
+    else if (weaponGeneralClass.at(0) == 'S')
+    {
+        weaponGeneralClassIndex = 1;
+    }
+    else
+    {
+        weaponGeneralClassIndex = 2;
+    }
+
+
     json selectedWeaponType;
     std::vector<weaponType> weaponTypeTree;
-    if (weaponGeneralClass == "Primary") {
+    if (weaponGeneralClassIndex == 0) {
         // Define weapon type structure
         weaponTypeTree = {
             {1, "Primary", -1},
@@ -395,7 +398,7 @@ int main()
             {9, "Crossbow", 5}
         };
         selectedWeaponType = wikiPrimaryWeaponData;
-    } else if (weaponGeneralClass == "Secondary") {
+    } else if (weaponGeneralClassIndex == 1) {
         // Define weapon type structure
         weaponTypeTree = {
             {1, "Secondary", -1},
@@ -408,7 +411,7 @@ int main()
             {8, "Crossbow", 2}
         };
         selectedWeaponType = wikiSecondaryWeaponData;
-    } else if (weaponGeneralClass == "Melee") {
+    } else if (weaponGeneralClassIndex == 2) {
         // Define weapon type structure
         weaponTypeTree = {
             {1, "Melee", -1},
@@ -662,6 +665,7 @@ int main()
         // then also make a loop that tries each permutation of elemental mods to try their configs
         for (int arcaneSlotIndex = 0; arcaneSlotIndex < validArcanes.size(); arcaneSlotIndex++)
         {
+            currentModConfig.addArcane(validArcanes[arcaneSlotIndex]);
             for (int modSlotOneIndex = 0; modSlotOneIndex < validMods.size() - 7; modSlotOneIndex++)
             {
                 // this section skips to the next possible mod in this slot if any mods that are already selected are incompatible with it
@@ -834,37 +838,25 @@ int main()
                                                 // }
 
                                                 // ---------------------------------------- CALCULATE DAMAGE ----------------------------------------
-                                                auto [tempAverageShot, tempAverageBurstDPS, tempAverageSustainedDPS] = calculateDPSValues(currentWeapon, currentAttack, weaponGeneralClass, currEnemy);
+                                                auto [tempAverageShot, tempAverageBurstDPS, tempAverageSustainedDPS] = calculateDPSValues(currentWeapon, currentAttack, weaponGeneralClassIndex, currEnemy);
                                                         // std::cout << "I calculated the DPS!\n";
                                                 if (tempAverageShot > optimalStats.at(currentAttack.attackIndex - 1).at(0))
                                                 {
-                                                    #pragma omp critical
-                                                    if (tempAverageShot > optimalStats.at(currentAttack.attackIndex - 1).at(0))
-                                                    {
-                                                        optimalStats[currentAttack.attackIndex - 1][0] = tempAverageShot;
-                                                        optimalModChoices[currentAttack.attackIndex - 1][0] = currentModConfig.currentModIndices;
-                                                        optimalSingleShotArcaneIndex = arcaneSlotIndex;
-                                                    }
+                                                    optimalStats[currentAttack.attackIndex - 1][0] = tempAverageShot;
+                                                    optimalModChoices[currentAttack.attackIndex - 1][0] = currentModConfig.currentModIndices;
+                                                    optimalSingleShotArcaneIndex = arcaneSlotIndex;
                                                 }
                                                 if (tempAverageBurstDPS > optimalStats.at(currentAttack.attackIndex - 1).at(1))
                                                 {
-                                                    #pragma omp critical
-                                                    if (tempAverageBurstDPS > optimalStats.at(currentAttack.attackIndex - 1).at(1))
-                                                    {
                                                     optimalStats[currentAttack.attackIndex - 1][1] = tempAverageBurstDPS;
                                                     optimalModChoices[currentAttack.attackIndex - 1][1] = currentModConfig.currentModIndices;
                                                     optimalBurstDPSArcaneIndex = arcaneSlotIndex;
-                                                    }
                                                 }
                                                 if (tempAverageSustainedDPS > optimalStats.at(currentAttack.attackIndex - 1).at(2))
                                                 {
-                                                    #pragma omp critical
-                                                    if (tempAverageBurstDPS > optimalStats.at(currentAttack.attackIndex - 1).at(2))
-                                                    {
                                                     optimalStats[currentAttack.attackIndex - 1][2] = tempAverageSustainedDPS;
                                                     optimalModChoices[currentAttack.attackIndex - 1][2] = currentModConfig.currentModIndices;
                                                     optimalSustainedDPSArcaneIndex = arcaneSlotIndex;
-                                                    }
                                                 }
                                             }
 
@@ -947,6 +939,7 @@ int main()
                 currentModConfig.removeMod(validMods[modSlotOneIndex], modSlotOneIndex);    //  Last entry should always be this mod as it is about to move to a lower level
                 // Move up a loop
             }
+            currentModConfig.removeArcane(validArcanes[arcaneSlotIndex]);
         }
         for (int i = 0; i < currentWeapon.attackList.size(); i++)
         {

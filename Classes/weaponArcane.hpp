@@ -16,6 +16,9 @@ class weaponArcane
         bool modifiesWeapon = false;
         bool arcaneModifier = false;
 
+        uint16_t weaponModifierMask = 0;
+        int arcaneModifierIndex = -1;
+
         bool pruneThis = false;                             // whether the mod should be pruned (ie: better version exists so don't count in damage calcs, or no affect on damage outcome (for example, ammo max mods))
         
         std::array<double, 13> weaponModifiers = {0};
@@ -315,6 +318,27 @@ class weaponArcane
                             // ^ Not real way to track how useful this is
                             this->pruneThis = true;
                         }
+                    }
+                }
+            }
+
+            if (modifiesWeapon)
+            {
+                for (int weaponUpgradeIndex = 0; weaponUpgradeIndex < 13; weaponUpgradeIndex++)
+                {
+                    if (this->weaponModifiers.at(weaponUpgradeIndex) != 0)
+                    {
+                        this->weaponModifierMask |= (1 << weaponUpgradeIndex);
+                    }
+                }
+            }
+            else
+            {
+                for (int arcaneUpgradeIndex = 0; arcaneUpgradeIndex < 15; arcaneUpgradeIndex++)
+                {
+                    if (this->arcaneBuffs.at(arcaneUpgradeIndex))
+                    {
+                        this->arcaneModifierIndex = arcaneUpgradeIndex;
                     }
                 }
             }

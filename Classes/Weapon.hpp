@@ -214,6 +214,10 @@ class Weapon
                 savedAttackStats[attackIndex][3] = currentAttack.critMultiplier;
                 savedAttackStats[attackIndex][4] = currentAttack.statusChance;
                 attackIndex++;
+                if (currentAttack.triggerType.empty())
+                {   // fill in attacks trigger type with weapons i it is empty
+                    currentAttack.triggerType = this->triggerType;
+                }
             }
         }
 
