@@ -251,7 +251,7 @@ class Weapon
                         currentAttack.damage[i] = (currentAttack.damage[i] + (totalBaseDamage * ((currentModConfig.statusTypeModifiers[i] * 0.01))));
                     }
                 }
-                currentAttack.damageTypesMask |= currentModConfig.modifiedStatusTypeIndicesMask;
+                currentAttack.damageTypesMask |= currentModConfig.getStatusTypeMask();
             }
         }
         [[msvc::noinline]] void removeModConfig(weaponModConfig& currentModConfig)

@@ -10,6 +10,7 @@
 #include <string>
 #include <cmath>
 #include <algorithm>
+#include <omp.h>
 // json loading thanks to nlohmann, further info in nlohmann/json.hpp
 
 using json = nlohmann::json;
@@ -103,13 +104,14 @@ std::tuple<double, double, double> calculateDPSValues(Weapon& moddedWeapon, atta
         effectiveFireRate = currAttack.fireRate;
     }
     
-    if (triggerType.at(0) == 'S' || // Semi-Auto
-    triggerType.at(0) == 'D' || // Duplex
-    triggerType.at(0) == 'H')   // Held
+    char triggerTypeStartingChar = triggerType.at(0);
+    if (triggerTypeStartingChar == 'S' || // Semi-Auto
+    triggerTypeStartingChar == 'D' || // Duplex
+    triggerTypeStartingChar == 'H')   // Held
     {
         effectiveFireRate = currAttack.fireRate;
     }
-    else if (triggerType.at(0) == 'C')    // Charge
+    else if (triggerTypeStartingChar == 'C')    // Charge
     {
         effectiveFireRate = (1 / (moddedWeapon.reloadRate + (1 / currAttack.fireRate)));
     }
@@ -141,15 +143,13 @@ std::tuple<double, double, double> calculateDPSValues(Weapon& moddedWeapon, atta
             // cap at max amount
             // add to enemy
             // update damage calculations ot take into account the CC, CD, etc. buffs
-            double proportionOfTotalDamage = currAttack.damage[i] / totalDamage;
-            double statusAppliedPerHit = proportionOfTotalDamage * currAttack.statusChance;
-            double statusAppliedPerShot = statusAppliedPerHit * multishotValue;
-            double statusAppliedPerSecond = statusAppliedPerShot * effectiveFireRate;
+            // double proportionOfTotalDamage = currAttack.damage[i] / totalDamage;
+            //  double statusAppliedPerHit = proportionOfTotalDamage * currAttack.statusChance;
+            //  double statusAppliedPerShot = statusAppliedPerHit * multishotValue;
+            //  double statusAppliedPerSecond = statusAppliedPerShot * effectiveFireRate;
 
-            // std::cout << "I got here too!\n";
 
-            // multiply by status duration
-            double averageStatusCount = statusAppliedPerSecond * ((currEnemy.getStatusDurations()).at(i) * moddedWeapon.statusDuration);
+            double averageStatusCount = ((((currAttack.damage[i] / totalDamage) * currAttack.statusChance) * multishotValue) * effectiveFireRate) * ((currEnemy.getStatusDurations()).at(i) * moddedWeapon.statusDuration);
             // round down if above cap
             double finalStatusCount = 0;
             if (averageStatusCount >= (currEnemy.getStatusCaps()).at(i))
@@ -656,7 +656,6 @@ int main()
     totalCalculations = totalCalculations * validArcanes.size();
     unsigned long long completedCalculations = 0;
 
-
     for (auto& currentWeapon : weaponList)
     {
         // nested for loops, each starting at 1 higher index, each ending 1 index earlier from the end of valid mods vector
@@ -839,21 +838,33 @@ int main()
                                                         // std::cout << "I calculated the DPS!\n";
                                                 if (tempAverageShot > optimalStats.at(currentAttack.attackIndex - 1).at(0))
                                                 {
-                                                    optimalStats[currentAttack.attackIndex - 1][0] = tempAverageShot;
-                                                    optimalModChoices[currentAttack.attackIndex - 1][0] = currentModConfig.currentModIndices;
-                                                    optimalSingleShotArcaneIndex = arcaneSlotIndex;
+                                                    #pragma omp critical
+                                                    if (tempAverageShot > optimalStats.at(currentAttack.attackIndex - 1).at(0))
+                                                    {
+                                                        optimalStats[currentAttack.attackIndex - 1][0] = tempAverageShot;
+                                                        optimalModChoices[currentAttack.attackIndex - 1][0] = currentModConfig.currentModIndices;
+                                                        optimalSingleShotArcaneIndex = arcaneSlotIndex;
+                                                    }
                                                 }
                                                 if (tempAverageBurstDPS > optimalStats.at(currentAttack.attackIndex - 1).at(1))
                                                 {
+                                                    #pragma omp critical
+                                                    if (tempAverageBurstDPS > optimalStats.at(currentAttack.attackIndex - 1).at(1))
+                                                    {
                                                     optimalStats[currentAttack.attackIndex - 1][1] = tempAverageBurstDPS;
                                                     optimalModChoices[currentAttack.attackIndex - 1][1] = currentModConfig.currentModIndices;
                                                     optimalBurstDPSArcaneIndex = arcaneSlotIndex;
+                                                    }
                                                 }
                                                 if (tempAverageSustainedDPS > optimalStats.at(currentAttack.attackIndex - 1).at(2))
                                                 {
+                                                    #pragma omp critical
+                                                    if (tempAverageBurstDPS > optimalStats.at(currentAttack.attackIndex - 1).at(2))
+                                                    {
                                                     optimalStats[currentAttack.attackIndex - 1][2] = tempAverageSustainedDPS;
                                                     optimalModChoices[currentAttack.attackIndex - 1][2] = currentModConfig.currentModIndices;
                                                     optimalSustainedDPSArcaneIndex = arcaneSlotIndex;
+                                                    }
                                                 }
                                             }
 

@@ -49,10 +49,24 @@ class weaponModConfig
         //Entry 11: {"Radiation", 0},           // "<DT_RADIATION_COLOR>Radiation"
         //Entry 12: {"Viral", 0}                // "<DT_VIRAL_COLOR>Viral"
 
-        uint16_t modifiedStatusTypeIndicesMask = {};
+        uint16_t modifiedStatusTypeIndicesMask = 0;
+        std::array<uint16_t, 8> modStatusTypeMasks = {};
 
         // create a base instance of this then add and remove mods as the loop goes, and apply the 'config' setup
         // this also lets me save a copy of the vector of mods at the time it outperforms the current best mods
+
+        [[msvc::noinline]] uint16_t getStatusTypeMask() // make this constructor create a mod based on passed in data. I need to decide how to pass in the data from the json though
+        {
+            return (modStatusTypeMasks[0] ^
+            modStatusTypeMasks[1] ^
+            modStatusTypeMasks[2] ^
+            modStatusTypeMasks[3] ^
+            modStatusTypeMasks[4] ^
+            modStatusTypeMasks[5] ^
+            modStatusTypeMasks[6] ^
+            modStatusTypeMasks[7])
+            ;
+        }
 
         [[msvc::noinline]] void addMod(weaponMod& currentMod, int modIndex) // make this constructor create a mod based on passed in data. I need to decide how to pass in the data from the json though
         {
@@ -66,16 +80,17 @@ class weaponModConfig
             if (currentMod.modifiesElements)
             {
                 indicesToCheck = currentMod.modifiedElementIndicesMask;
+                this->modifiedStatusTypeIndicesMask |= indicesToCheck; // add the indices of modified elements from this mod
                 while (indicesToCheck)
                 {
                     int modifiedElementIndex = std::countr_zero(indicesToCheck);
                     this->statusTypeModifiers[modifiedElementIndex] += currentMod.statusTypeModifiers[modifiedElementIndex];
-                    this->modifiedStatusTypeIndicesMask |= (1 << modifiedElementIndex);
                     indicesToCheck &= indicesToCheck - 1;   //  this gets the result only where these match, subtracting one makes the lowest valued bit shift, so it doesn't match, so it removes the lowest bit set to 1
                 }
             }
 
             currentModIndices.push_back(currentMod.indexInValidMods);
+            this->modStatusTypeMasks[currentModIndices.size() - 1] = currentMod.modifiedElementIndicesMask;
 
             if (currentMod.isElementalMod)
             {
@@ -98,12 +113,13 @@ class weaponModConfig
                 {
                     int modifiedElementIndex = std::countr_zero(indicesToCheck);
                     this->statusTypeModifiers[modifiedElementIndex] -= currentMod.statusTypeModifiers[modifiedElementIndex];
-                    this->modifiedStatusTypeIndicesMask |= (1 << modifiedElementIndex);
                     indicesToCheck &= indicesToCheck - 1;   //  this gets the result only where these match, subtracting one makes the lowest valued bit shift, so it doesn't match, so it removes the lowest bit set to 1
                 }
             }
 
             currentModIndices.pop_back();                 //  remove from current mods (will always be last because of how mods are popped)
+
+            this->modStatusTypeMasks[currentModIndices.size() - 1] = 0;
 
             if (currentMod.isElementalMod)
             {
