@@ -25,13 +25,13 @@ class weaponMod
         bool isElementalMod = false;
 
         // list of the index for each entry that is worth something
-        uint16_t weaponModifierMask = 0;
+        unsigned int weaponModifierMask = 0;
 
         // list of the index for each entry that is worth something
-        uint16_t modifiedElementIndicesMask = 0;
+        unsigned int modifiedElementIndicesMask = 0;
 
 
-        std::array<double, 13> weaponModifiers = {0};
+        std::array<double, 11> weaponModifiers = {0};
         // the comment is the string to regex for when parsing a mod description, and which value in weaponModifiers to affect for it
         //Entry 0: "Fire Rate" or "Attack Speed"
         //Entry 1: "Multishot"
@@ -44,8 +44,11 @@ class weaponMod
         //Entry 8: "Status Damage"
         //Entry 9: "Reload Speed"
         //Entry 10: "Direct Damage per Status Type affecting the target" or "Melee Damage per Status Type affecting the target"
-        //Entry 11: "Fire Rate cannot be modified"
-        //Entry 12: "Multishot cannot be modified"
+        
+        // "Fire Rate cannot be modified"
+        bool locksFireRate = false;
+        // "Multishot cannot be modified"
+        bool locksMultishot = false;
 
         std::array<double, 13> statusTypeModifiers = {0};
         // the comment is the string to regex for when parsing a mod description
@@ -137,8 +140,7 @@ class weaponMod
                         {
                             this->weaponModifiers[5] = 240;
                         }
-                        // Find a way to lock fire rate
-                        this->weaponModifiers[11]++;
+                        this->locksFireRate = true;
                     } else if (this->description.find("On ") == 0) // finds if the first match is at 0
                     {
                         /// List of mods to parse
@@ -883,11 +885,12 @@ class weaponMod
                 currentValidModsIndex++;
             }
 
-            for (int weaponUpgradeIndex = 0; weaponUpgradeIndex < 13; weaponUpgradeIndex++)
+            for (int weaponUpgradeIndex = 0; weaponUpgradeIndex < 11; weaponUpgradeIndex++)
             {
                 if (this->weaponModifiers.at(weaponUpgradeIndex) != 0)
                 {
                     this->weaponModifierMask |= (1 << weaponUpgradeIndex);
+                    this->weaponModifiers[weaponUpgradeIndex] = this->weaponModifiers[weaponUpgradeIndex] * 0.01;
                 }
             }
             for (int elementalUpgradeIndex = 0; elementalUpgradeIndex < 13; elementalUpgradeIndex++)
@@ -895,6 +898,7 @@ class weaponMod
                 if (this->statusTypeModifiers.at(elementalUpgradeIndex) != 0)
                 {
                     this->modifiedElementIndicesMask |= (1 << elementalUpgradeIndex);
+                    this->statusTypeModifiers[elementalUpgradeIndex] = this->statusTypeModifiers[elementalUpgradeIndex] * 0.01;
                 }
             }
         }

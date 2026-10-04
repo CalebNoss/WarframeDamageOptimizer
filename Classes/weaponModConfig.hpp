@@ -31,8 +31,11 @@ class weaponModConfig
         //Entry 8: "Status Damage"
         //Entry 9: "Reload Speed"
         //Entry 10: "Direct Damage per Status Type affecting the target" or "Melee Damage per Status Type affecting the target"
-        //Entry 11: "Fire Rate cannot be modified"
-        //Entry 12: "Multishot cannot be modified"
+
+        // "Fire Rate cannot be modified"
+        bool locksFireRate = false;
+        // "Multishot cannot be modified"
+        bool locksMultishot = false;
 
         std::array<double, 13> statusTypeModifiers = {0};
         // the comment is the string to regex for when parsing a mod description
@@ -50,8 +53,8 @@ class weaponModConfig
         //Entry 11: {"Radiation", 0},           // "<DT_RADIATION_COLOR>Radiation"
         //Entry 12: {"Viral", 0}                // "<DT_VIRAL_COLOR>Viral"
 
-        uint16_t modifiedStatusTypeIndicesMask = 0;
-        std::array<uint16_t, 8> modStatusTypeMasks = {};
+        unsigned int modifiedStatusTypeIndicesMask = 0;
+        std::array<unsigned int, 8> modStatusTypeMasks = {};
 
         bool arcaneBuff = false;
         int activeArcaneIndex = -1;
@@ -59,7 +62,7 @@ class weaponModConfig
         // create a base instance of this then add and remove mods as the loop goes, and apply the 'config' setup
         // this also lets me save a copy of the vector of mods at the time it outperforms the current best mods
 
-        [[msvc::noinline]] uint16_t getStatusTypeMask() // make this constructor create a mod based on passed in data. I need to decide how to pass in the data from the json though
+        [[msvc::noinline]] unsigned int getStatusTypeMask() // make this constructor create a mod based on passed in data. I need to decide how to pass in the data from the json though
         {
             return (modStatusTypeMasks[0] ^
             modStatusTypeMasks[1] ^
@@ -76,7 +79,7 @@ class weaponModConfig
         {
             if (currentArcane.modifiesWeapon)
             {
-                uint16_t indicesToCheck = currentArcane.weaponModifierMask;
+                unsigned int indicesToCheck = currentArcane.weaponModifierMask;
                 while (indicesToCheck)
                 {
                     int modifiedStatIndex = std::countr_zero(indicesToCheck);
@@ -85,11 +88,12 @@ class weaponModConfig
                 }
             }
         }
+
         [[msvc::noinline]] void removeArcane(weaponArcane& currentArcane) // make this constructor create a mod based on passed in data. I need to decide how to pass in the data from the json though
         {
             if (currentArcane.modifiesWeapon)
             {
-                uint16_t indicesToCheck = currentArcane.weaponModifierMask;
+                unsigned int indicesToCheck = currentArcane.weaponModifierMask;
                 while (indicesToCheck)
                 {
                     int modifiedStatIndex = std::countr_zero(indicesToCheck);
@@ -103,11 +107,10 @@ class weaponModConfig
                 this->activeArcaneIndex = currentArcane.arcaneModifierIndex;
             }
         }
-        
 
         [[msvc::noinline]] void addMod(weaponMod& currentMod, int modIndex) // make this constructor create a mod based on passed in data. I need to decide how to pass in the data from the json though
         {
-            uint16_t indicesToCheck = currentMod.weaponModifierMask;
+            unsigned int indicesToCheck = currentMod.weaponModifierMask;
             while (indicesToCheck)
             {
                 int modifiedStatIndex = std::countr_zero(indicesToCheck);
@@ -117,7 +120,6 @@ class weaponModConfig
             if (currentMod.modifiesElements)
             {
                 indicesToCheck = currentMod.modifiedElementIndicesMask;
-                this->modifiedStatusTypeIndicesMask |= indicesToCheck; // add the indices of modified elements from this mod
                 while (indicesToCheck)
                 {
                     int modifiedElementIndex = std::countr_zero(indicesToCheck);
@@ -125,6 +127,9 @@ class weaponModConfig
                     indicesToCheck &= indicesToCheck - 1;   //  this gets the result only where these match, subtracting one makes the lowest valued bit shift, so it doesn't match, so it removes the lowest bit set to 1
                 }
             }
+
+            this->locksFireRate = currentMod.locksFireRate;
+            this->locksMultishot = currentMod.locksMultishot;
 
             currentModIndices.push_back(currentMod.indexInValidMods);
             this->modStatusTypeMasks[currentModIndices.size() - 1] = currentMod.modifiedElementIndicesMask;
@@ -134,9 +139,10 @@ class weaponModConfig
                 elementalMods.push_back(modIndex);
             }
         }
+        
         [[msvc::noinline]] void removeMod(weaponMod& currentMod, int modIndex) // make this constructor create a mod based on passed in data. I need to decide how to pass in the data from the json though
         {
-            uint16_t indicesToCheck = currentMod.weaponModifierMask;
+            unsigned int indicesToCheck = currentMod.weaponModifierMask;
             while (indicesToCheck)  // until indicesToCheck == 0
             {
                 int modifiedStatIndex = std::countr_zero(indicesToCheck);
@@ -154,9 +160,18 @@ class weaponModConfig
                 }
             }
 
+            if (this->locksFireRate && currentMod.locksFireRate)
+            {
+                this->locksFireRate = false;
+            }
+            if (this->locksMultishot && currentMod.locksMultishot)
+            {
+                this->locksMultishot = false;
+            }
+
             currentModIndices.pop_back();                 //  remove from current mods (will always be last because of how mods are popped)
 
-            this->modStatusTypeMasks[currentModIndices.size() - 1] = 0;
+            this->modStatusTypeMasks[currentModIndices.size()] = 0;
 
             if (currentMod.isElementalMod)
             {

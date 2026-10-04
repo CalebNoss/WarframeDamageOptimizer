@@ -37,7 +37,22 @@ json loadJsonFile(std::string fileName)
 }
 
 
-
+std::array<double, 14> baseStatusDurations = {
+    6,          // 0  = Impact = 6
+    10,         // 1  = Puncture = 10
+    6,          // 2  = Slash = 6
+    6,          // 3  = Heat = 6
+    6,          // 4  = Cold = 6
+    6,          // 5  = Electricity = 6
+    6,          // 6  = Toxin = 6
+    1.5,        // 7  = Blast = 1.5
+    8,          // 8  = Corrosive = 8
+    6,          // 9 = Gas = 6
+    6,          // 10 = Magnetic = 6
+    12,         // 11 = Radiation = 12
+    6,          // 12 = Viral = 6
+    8           // 13 = Tau = 8
+};
 
 std::array<double, 14> statusCaps = {
             5,              // 0  = Impact = 5
@@ -133,6 +148,11 @@ std::tuple<double, double, double> calculateDPSValues(Weapon& moddedWeapon, atta
     // Calculate status amounts on enemy
     std::array<double, 14>* currStatusCounts = currEnemy.getStatusCounts();
     damageTypesMask = currAttack.damageTypesMask;
+    
+    // setup data so it isn't calculated every loop for optimizing performance
+    double totalDamageInverse = 1 / totalDamage;
+    double avgStatusCountConstants = totalDamageInverse * currAttack.statusChance * multishotValue * effectiveFireRate * moddedWeapon.statusDuration;
+    
     for (int i = 0; i < 14; i++)
     {
         if ((damageTypesMask & 1) == 1)  // skip if this damage doesn't exist
@@ -150,19 +170,12 @@ std::tuple<double, double, double> calculateDPSValues(Weapon& moddedWeapon, atta
             //  double statusAppliedPerShot = statusAppliedPerHit * multishotValue;
             //  double statusAppliedPerSecond = statusAppliedPerShot * effectiveFireRate;
 
+            double averageStatusCount = currAttack.damage[i] * avgStatusCountConstants * baseStatusDurations.at(i);
 
-            double averageStatusCount = ((((currAttack.damage[i] / totalDamage) * currAttack.statusChance) * multishotValue) * effectiveFireRate) * ((currEnemy.getStatusDurations()).at(i) * moddedWeapon.statusDuration);
             // round down if above cap
-            double finalStatusCount = 0;
-            if (averageStatusCount >= statusCaps.at(i))
-            {
-                finalStatusCount = statusCaps.at(i);
-            } else
-            {
-                finalStatusCount = averageStatusCount;
-            }
+            double finalStatusCount = std::min(averageStatusCount, statusCaps.at(i));
 
-            if (finalStatusCount >= 0)
+            if (finalStatusCount)   // if not == 0
             {
                 distinctStatusCount++;
             }
@@ -172,23 +185,23 @@ std::tuple<double, double, double> calculateDPSValues(Weapon& moddedWeapon, atta
         damageTypesMask >>= 1;  // move to the right one to look at the next status type
     }
 
-    double baseDMGModValue = (1 + (moddedWeapon.baseDamageModifier * 0.01));
+    double baseDMGModValue = (1 + moddedWeapon.baseDamageModifier);
     double gunCOModValue = 0;
     if (currAttack.shotType == "Hit-Scan")
     {
         // normal addative gunCO;
-        baseDMGModValue += ((moddedWeapon.gunCOModifier * 0.01) * distinctStatusCount);
+        baseDMGModValue += (moddedWeapon.gunCOModifier * distinctStatusCount);
     }
     else if (currAttack.shotType == "Projectile")
     {
         if (moddedWeapon.className == "Bow")
         {
             // gunCO apples to uncharged shot, so half the bonus (charged shot is 2x uncharged, this should balance it)
-            gunCOModValue += ((moddedWeapon.gunCOModifier * 0.01) / 2);
+            gunCOModValue += (moddedWeapon.gunCOModifier / 2);
         }
         else
         {
-            gunCOModValue += (moddedWeapon.gunCOModifier * 0.01);
+            gunCOModValue += moddedWeapon.gunCOModifier;
         }
     }
 

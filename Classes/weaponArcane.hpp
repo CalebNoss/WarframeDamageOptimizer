@@ -16,7 +16,7 @@ class weaponArcane
         bool modifiesWeapon = false;
         bool arcaneModifier = false;
 
-        uint16_t weaponModifierMask = 0;
+        unsigned int weaponModifierMask = 0;
         int arcaneModifierIndex = -1;
 
         bool pruneThis = false;                             // whether the mod should be pruned (ie: better version exists so don't count in damage calcs, or no affect on damage outcome (for example, ammo max mods))
@@ -329,6 +329,7 @@ class weaponArcane
                     if (this->weaponModifiers.at(weaponUpgradeIndex) != 0)
                     {
                         this->weaponModifierMask |= (1 << weaponUpgradeIndex);
+                        this->weaponModifiers[weaponUpgradeIndex] = this->weaponModifiers[weaponUpgradeIndex] * 0.01;
                     }
                 }
             }
