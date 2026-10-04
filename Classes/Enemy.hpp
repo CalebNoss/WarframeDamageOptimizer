@@ -15,24 +15,6 @@ class Enemy
         double addedStatusVulnerability = 0.0f; // added status chance from tau stacks
 
 
-        std::array<double, 14> statusCaps = {
-            5,              // 0  = Impact = 5
-            5,              // 1  = Puncture = 5
-            1061109567,     // 2  = Slash = 1061109567
-            1061109567,     // 3  = Heat = 1061109567
-            10,             // 4  = Cold = 10
-            1061109567,     // 5  = Electricity = 1061109567
-            1061109567,     // 6  = Toxin = 1061109567
-            10,             // 7  = Blast = 10
-            10,             // 8  = Corrosive = 10
-            10,             // 9 = Gas = 10
-            10,             // 10 = Magnetic = 10
-            10,             // 11 = Radiation = 10
-            10,             // 12 = Viral = 10
-            10              // 13 = Tau = 10}
-        };
-
-
         std::array<double, 14> statusDurations = {
             6,          // 0  = Impact = 6
             10,         // 1  = Puncture = 10
@@ -116,7 +98,6 @@ class Enemy
 
         // general getters
         double getHeatInheritDamage() const { return heatInheritDamage; }
-        const std::array<double, 14>& getStatusCaps() const { return statusCaps; }
         const std::array<double, 14>& getStatusDurations() const { return statusDurations; }
         std::array<double, 14>* getStatusCounts() { return &statusCounts; }
 

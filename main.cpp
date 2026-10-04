@@ -39,7 +39,22 @@ json loadJsonFile(std::string fileName)
 
 
 
-
+std::array<double, 14> statusCaps = {
+            5,              // 0  = Impact = 5
+            5,              // 1  = Puncture = 5
+            1061109567,     // 2  = Slash = 1061109567
+            1061109567,     // 3  = Heat = 1061109567
+            10,             // 4  = Cold = 10
+            1061109567,     // 5  = Electricity = 1061109567
+            1061109567,     // 6  = Toxin = 1061109567
+            10,             // 7  = Blast = 10
+            10,             // 8  = Corrosive = 10
+            10,             // 9 = Gas = 10
+            10,             // 10 = Magnetic = 10
+            10,             // 11 = Radiation = 10
+            10,             // 12 = Viral = 10
+            10              // 13 = Tau = 10}
+        };
 
 
 std::tuple<double, double, double> calculateDPSValues(Weapon& moddedWeapon, attackData& currAttack, int weaponTypeIndex, Enemy& currEnemy)
@@ -139,9 +154,9 @@ std::tuple<double, double, double> calculateDPSValues(Weapon& moddedWeapon, atta
             double averageStatusCount = ((((currAttack.damage[i] / totalDamage) * currAttack.statusChance) * multishotValue) * effectiveFireRate) * ((currEnemy.getStatusDurations()).at(i) * moddedWeapon.statusDuration);
             // round down if above cap
             double finalStatusCount = 0;
-            if (averageStatusCount >= (currEnemy.getStatusCaps()).at(i))
+            if (averageStatusCount >= statusCaps.at(i))
             {
-                finalStatusCount = (currEnemy.getStatusCaps()).at(i);
+                finalStatusCount = statusCaps.at(i);
             } else
             {
                 finalStatusCount = averageStatusCount;
