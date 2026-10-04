@@ -5,6 +5,7 @@
 #include <sstream>
 #include <array>
 
+
 class weaponMod
 {
     public:
@@ -20,7 +21,16 @@ class weaponMod
         int indexInValidMods = -1;
 
         bool pruneThis = false;                             // whether the mod should be pruned (ie: better version exists so don't count in damage calcs, or no affect on damage outcome (for example, ammo max mods))
-        
+        bool modifiesElements = false;
+        bool isElementalMod = false;
+
+        // list of the index for each entry that is worth something
+        uint16_t weaponModifierMask = 0;
+
+        // list of the index for each entry that is worth something
+        uint16_t modifiedElementIndicesMask = 0;
+
+
         std::array<double, 13> weaponModifiers = {0};
         // the comment is the string to regex for when parsing a mod description, and which value in weaponModifiers to affect for it
         //Entry 0: "Fire Rate" or "Attack Speed"
@@ -324,14 +334,17 @@ class weaponMod
                                 if (this->description[10] == 'I')
                                 {   // impact mod
                                     this->statusTypeModifiers[0] = 120;
+                                    this->modifiesElements = true;
                                 }
                                 else if (this->description[10] == 'P')
                                 {   // puncture mod
                                     this->statusTypeModifiers[1] = 120;
+                                    this->modifiesElements = true;
                                 }
                                 else if (this->description[10] == 'S')
                                 {   // slash mod
                                     this->statusTypeModifiers[2] = 120;
+                                    this->modifiesElements = true;
                                 }
                                 else if (this->description[15] == 'C')
                                 {   // Critical Chance
@@ -373,9 +386,11 @@ class weaponMod
                             {
                                 if (this->description[6] == '<')
                                 {   //  Primed Elemental Mod
+                                    this->modifiesElements = true;
                                     if (this->description[10] == 'E')
                                     {   //  Primed Convulsion
                                         this->statusTypeModifiers[5] = 165;
+                                        this->isElementalMod = true;
                                     }
                                     else if (this->description[10] == 'I')
                                     {   //  Primed Heavy Trauma
@@ -384,14 +399,17 @@ class weaponMod
                                     else if (this->description[10] == 'P')
                                     {   //  Primed Fever Strike
                                         this->statusTypeModifiers[6] = 165;
+                                        this->isElementalMod = true;
                                     }
                                     else if (this->description[11] == 'I')
                                     {   //  Primed Heated Charge
                                         this->statusTypeModifiers[3] = 165;
+                                        this->isElementalMod = true;
                                     }
                                     else if (this->description[11] == 'R')
                                     {   //  Primed Cryo Rounds  or  Primed Chilling Grasp
                                         this->statusTypeModifiers[4] = 165;
+                                        this->isElementalMod = true;
                                     }
                                 }
                                 else
@@ -423,6 +441,8 @@ class weaponMod
                                 {   //  Wildfire
                                     this->weaponModifiers[2] = 20;
                                     this->statusTypeModifiers[3] = 60;
+                                    this->isElementalMod = true;
+                                    this->modifiesElements = true;
                                 }
                                 else
                                 {   // Martial Fury     |       Lie in Wait     -       Conclave Exclusive
@@ -469,11 +489,15 @@ class weaponMod
                                 else if (this->description[5] == 'H')
                                 {   //  Focus Energy
                                     this->statusTypeModifiers[5] = 60;
+                                    this->isElementalMod = true;
+                                    this->modifiesElements = true;
                                 }
                                 else if (this->description[5] == 'M')
                                 {   //  Ice Storm
                                     this->weaponModifiers[2] = 40;
                                     this->statusTypeModifiers[4] = 40;
+                                    this->isElementalMod = true;
+                                    this->modifiesElements = true;
                                 }
                                 else if (this->description[5] == 'R')
                                 {   //  Stunning Speed
@@ -534,14 +558,17 @@ class weaponMod
                         {
                             if (this->description[5] == '<')
                             {   //  Elemental 60/60 mods
+                                this->modifiesElements = true;
                                 if (this->description[9] == 'E')
                                 {   //  Electric 60/60 mods
                                     this->statusTypeModifiers[5] = 60;
                                     this->weaponModifiers[7] = 60;
+                                    this->isElementalMod = true;
                                 }
                                 else if (this->description[9] == 'M')
                                 {   //  Magnetic 60/60 mods
                                     this->statusTypeModifiers[10] = 60;
+                                    this->isElementalMod = true;
                                     if (this->type == "Rifle")
                                     {   //  Magnetic Capacity
                                         this->weaponModifiers[2] = 40;
@@ -563,10 +590,12 @@ class weaponMod
                                 {   //  Toxin 60/60 mods
                                     this->statusTypeModifiers[6] = 60;
                                     this->weaponModifiers[7] = 60;
+                                    this->isElementalMod = true;
                                 }
                                 else if (this->description[9] == 'R')
                                 {   //  Radiation 60/60 mods
                                     this->statusTypeModifiers[11] = 60;
+                                    this->isElementalMod = true;
                                     if (this->type == "Rifle")
                                     {   //  Radiated Reload
                                         this->weaponModifiers[9] = 40;
@@ -590,10 +619,12 @@ class weaponMod
                                 {   //  Heat 60/60 mods
                                     this->statusTypeModifiers[3] = 60;
                                     this->weaponModifiers[7] = 60;
+                                    this->isElementalMod = true;
                                 }
                                 else if (this->description[10] == 'R')
                                 {   // Cold 60/60 mods
                                     this->statusTypeModifiers[4] = 60;
+                                    this->isElementalMod = true;
                                     if (this->name == "Chilling Reload")
                                     {   //  Chilling Reload
                                         this->weaponModifiers[9] = 40;
@@ -620,6 +651,8 @@ class weaponMod
                             {   //  Blaze
                                 this->weaponModifiers[5] = 60;
                                 this->statusTypeModifiers[3] = 60;
+                                this->isElementalMod = true;
+                                this->modifiesElements = true;
                             }
                             else if (this->description[5] == 'F')
                             {   //  Fire rate mods
@@ -631,6 +664,7 @@ class weaponMod
                                 else if (this->type == "Shotgun")
                                 {   //  Accelerated Blast
                                     this->statusTypeModifiers[1] = 60;
+                                    this->modifiesElements = true;
                                 }
                             }
                             else if (this->description[6] == 'a')
@@ -716,21 +750,26 @@ class weaponMod
                         {
                             if (this->description[5] == '<')
                             {   //  Elemental mods
+                                this->modifiesElements = true;
                                 if (this->description[9] == 'E')
                                 {   //  Electric
                                     this->statusTypeModifiers[5] = 90;
+                                    this->isElementalMod = true;
                                 }
                                 else if (this->description[10] == 'I')
                                 {   //  Heat
                                     this->statusTypeModifiers[3] = 90;
+                                    this->isElementalMod = true;
                                 }
                                 else if (this->description[10] == 'R')
                                 {   //  Cold
                                     this->statusTypeModifiers[4] = 90;
+                                    this->isElementalMod = true;
                                 }
                                 else if (this->description[10] == 'O')
                                 {   //  Toxin
                                     this->statusTypeModifiers[6] = 90;
+                                    this->isElementalMod = true;
                                 }
                                 else
                                 {
@@ -808,6 +847,7 @@ class weaponMod
                                 {   //  Amar's Contempt
                                     this->weaponModifiers[5] = 90;
                                     this->statusTypeModifiers[2] = 30;
+                                    this->modifiesElements = true;
                                 }
                                 else if (this->type == "Polearms")
                                 {   //  Boreal's Contempt
@@ -841,6 +881,21 @@ class weaponMod
             {
                 this->indexInValidMods = currentValidModsIndex;
                 currentValidModsIndex++;
+            }
+
+            for (int weaponUpgradeIndex = 0; weaponUpgradeIndex < 13; weaponUpgradeIndex++)
+            {
+                if (this->weaponModifiers.at(weaponUpgradeIndex) != 0)
+                {
+                    this->weaponModifierMask |= (1 << weaponUpgradeIndex);
+                }
+            }
+            for (int elementalUpgradeIndex = 0; elementalUpgradeIndex < 13; elementalUpgradeIndex++)
+            {
+                if (this->statusTypeModifiers.at(elementalUpgradeIndex) != 0)
+                {
+                    this->modifiedElementIndicesMask |= (1 << elementalUpgradeIndex);
+                }
             }
         }
 };

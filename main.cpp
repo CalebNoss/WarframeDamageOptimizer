@@ -51,21 +51,16 @@ std::tuple<double, double, double> calculateDPSValues(Weapon& moddedWeapon, atta
     double totalDamage = 0;
     double multishotValue = 0;
 
+    uint16_t damageTypesMask = currAttack.damageTypesMask;
+    for (int i = 0; i < 14; i++)
+    {
+        if ((damageTypesMask & 1) == 1)  // skip if this damage doesn't exist
+        {
+            totalDamage += currAttack.damage[i];
+        }
+        damageTypesMask >>= 1;
+    }
 
-    totalDamage += currAttack.damage.at(0);     //  Impact
-    totalDamage += currAttack.damage.at(1);     //  Puncture
-    totalDamage += currAttack.damage.at(2);     //  Slash
-    totalDamage += currAttack.damage.at(3);     //  Heat
-    totalDamage += currAttack.damage.at(4);     //  Cold
-    totalDamage += currAttack.damage.at(5);     //  Electricity
-    totalDamage += currAttack.damage.at(6);     //  Toxin
-    totalDamage += currAttack.damage.at(7);     //  Blast
-    totalDamage += currAttack.damage.at(8);     //  Corrosive
-    totalDamage += currAttack.damage.at(9);     //  Gas
-    totalDamage += currAttack.damage.at(10);    //  Magnetic
-    totalDamage += currAttack.damage.at(11);    //  Radiation
-    totalDamage += currAttack.damage.at(12);    //  Viral
-    totalDamage += currAttack.damage.at(13);    //  Tau
     
     if (currAttack.multishot == 0)
     {
@@ -133,9 +128,10 @@ std::tuple<double, double, double> calculateDPSValues(Weapon& moddedWeapon, atta
 
     // Calculate status amounts on enemy
     std::array<double, 14>* currStatusCounts = currEnemy.getStatusCounts();
+    damageTypesMask = currAttack.damageTypesMask;
     for (int i = 0; i < 14; i++)
     {
-        if (currAttack.damage[i] != 0)  // skip if this damage doesn't exist
+        if ((damageTypesMask & 1) == 1)  // skip if this damage doesn't exist
         {
             // use each types damage as a proportion of totalDamage to get damage distribution
             // multiply by status chance to get amount applied per hit
@@ -171,6 +167,7 @@ std::tuple<double, double, double> calculateDPSValues(Weapon& moddedWeapon, atta
 
             (*currStatusCounts)[i] = finalStatusCount;
         }
+        damageTypesMask >>= 1;  // move to the right one to look at the next status type
     }
 
     double baseDMGModValue = (1 + (moddedWeapon.baseDamageModifier * 0.01));
@@ -220,7 +217,7 @@ std::tuple<double, double, double> calculateDPSValues(Weapon& moddedWeapon, atta
     double percentOfTimeShooting = 0;
 
     // Gun DPS
-    if (weaponType == "Primary" || weaponType == "Secondary")
+    if (weaponType.at(0) == 'P' || weaponType.at(0) == 'S') //  Primary ||  Secondary
     {
         if (currAttack.ammoCost != 0)
         {
@@ -860,8 +857,8 @@ int main()
                                                 }
                                             }
 
-                                            if ((++completedCalculations % 1000000) == 0)
-                                            {   //  print remaining calculation number every 100k completed calcs
+                                            if ((++completedCalculations % 10000000) == 0)
+                                            {   //  print remaining calculation number every 10M completed calcs
                                                 std::cout << "Remaining: " << (totalCalculations - completedCalculations) << '\n';
                                             }
 

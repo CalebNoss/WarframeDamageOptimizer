@@ -3,6 +3,7 @@
 #include <vector>
 #include <algorithm>
 #include <sstream>
+#include <bit>
 #include "weaponMod.hpp"
 
 class weaponModConfig
@@ -48,59 +49,63 @@ class weaponModConfig
         //Entry 11: {"Radiation", 0},           // "<DT_RADIATION_COLOR>Radiation"
         //Entry 12: {"Viral", 0}                // "<DT_VIRAL_COLOR>Viral"
 
+        uint16_t modifiedStatusTypeIndicesMask = {};
 
         // create a base instance of this then add and remove mods as the loop goes, and apply the 'config' setup
         // this also lets me save a copy of the vector of mods at the time it outperforms the current best mods
 
         [[msvc::noinline]] void addMod(weaponMod& currentMod, int modIndex) // make this constructor create a mod based on passed in data. I need to decide how to pass in the data from the json though
         {
-            bool isElementalMod = false;
-            for (int i = 0; i < 13; i++)
+            uint16_t indicesToCheck = currentMod.weaponModifierMask;
+            while (indicesToCheck)
             {
-                this->weaponModifiers[i] += currentMod.weaponModifiers[i];
+                int modifiedStatIndex = std::countr_zero(indicesToCheck);
+                this->weaponModifiers[modifiedStatIndex] += currentMod.weaponModifiers[modifiedStatIndex];
+                indicesToCheck &= indicesToCheck - 1;   //  this gets the result only where these match, subtracting one makes the lowest valued bit shift, so it doesn't match, so it removes the lowest bit set to 1
             }
-            for (int i = 0; i < 3; i++)
+            if (currentMod.modifiesElements)
             {
-                this->statusTypeModifiers[i] += currentMod.statusTypeModifiers[i];
-            }
-            for (int i = 3; i < 13; i++)
-            {   // split to combine the loops for checking elemental mods, should reduce number of checks by 9 per addition of mod
-                this->statusTypeModifiers[i] += currentMod.statusTypeModifiers[i];
-                if (currentMod.statusTypeModifiers[i] != 0)
+                indicesToCheck = currentMod.modifiedElementIndicesMask;
+                while (indicesToCheck)
                 {
-                    isElementalMod = true;
+                    int modifiedElementIndex = std::countr_zero(indicesToCheck);
+                    this->statusTypeModifiers[modifiedElementIndex] += currentMod.statusTypeModifiers[modifiedElementIndex];
+                    this->modifiedStatusTypeIndicesMask |= (1 << modifiedElementIndex);
+                    indicesToCheck &= indicesToCheck - 1;   //  this gets the result only where these match, subtracting one makes the lowest valued bit shift, so it doesn't match, so it removes the lowest bit set to 1
                 }
             }
+
             currentModIndices.push_back(currentMod.indexInValidMods);
 
-            if (isElementalMod)
+            if (currentMod.isElementalMod)
             {
                 elementalMods.push_back(modIndex);
             }
         }
         [[msvc::noinline]] void removeMod(weaponMod& currentMod, int modIndex) // make this constructor create a mod based on passed in data. I need to decide how to pass in the data from the json though
         {
-            bool isElementalMod = false;
-            for (int i = 0; i < 13; i++)
+            uint16_t indicesToCheck = currentMod.weaponModifierMask;
+            while (indicesToCheck)  // until indicesToCheck == 0
             {
-                this->weaponModifiers[i] -= currentMod.weaponModifiers[i];
+                int modifiedStatIndex = std::countr_zero(indicesToCheck);
+                this->weaponModifiers[modifiedStatIndex] -= currentMod.weaponModifiers[modifiedStatIndex];
+                indicesToCheck &= indicesToCheck - 1;   //  this gets the result only where these match, subtracting one makes the lowest valued bit shift, so it doesn't match, so it removes the lowest bit set to 1
             }
-            for (int i = 0; i < 3; i++)
+            if (currentMod.modifiesElements)
             {
-                this->statusTypeModifiers[i] -= currentMod.statusTypeModifiers[i];
-            }
-            for (int i = 3; i < 13; i++)
-            {   // split to combine the loops for checking elemental mods, should reduce number of checks by 9 per removal of mod
-                this->statusTypeModifiers[i] -= currentMod.statusTypeModifiers[i];
-                if (currentMod.statusTypeModifiers[i] != 0)
+                indicesToCheck = currentMod.modifiedElementIndicesMask;
+                while (indicesToCheck)
                 {
-                    isElementalMod = true;
+                    int modifiedElementIndex = std::countr_zero(indicesToCheck);
+                    this->statusTypeModifiers[modifiedElementIndex] -= currentMod.statusTypeModifiers[modifiedElementIndex];
+                    this->modifiedStatusTypeIndicesMask |= (1 << modifiedElementIndex);
+                    indicesToCheck &= indicesToCheck - 1;   //  this gets the result only where these match, subtracting one makes the lowest valued bit shift, so it doesn't match, so it removes the lowest bit set to 1
                 }
             }
 
             currentModIndices.pop_back();                 //  remove from current mods (will always be last because of how mods are popped)
 
-            if (isElementalMod)
+            if (currentMod.isElementalMod)
             {
                 this->elementalMods.pop_back();     //  remove from elemental mods (will always be last because of how mods are popped)
             }

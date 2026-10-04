@@ -72,6 +72,10 @@ class attackData
         //Entry 12: {"Viral", 0},                // "<DT_VIRAL_COLOR>Viral"
         //Entry 13: {"Tau", 0}                  // Something about tau, IDK right now
 
+        // list of indices of which types actually have a damage value
+        uint16_t damageTypesMask = 0;
+        uint16_t baseDamageTypesMask = 0;
+
         attackData(
             double newAttackIndex,
             std::string newAttackName,
@@ -106,6 +110,7 @@ class attackData
             {
                 int damageTypeIndex = damageTypeNames[damageType.first];
                 this->damage[damageTypeIndex] = damageType.second;
+                this->baseDamageTypesMask |= (1 << damageTypeIndex);
             }
 
             for (const auto& damageType : newDamage)
@@ -159,6 +164,9 @@ class Weapon
 
         std::vector<attackData> attackList = {};
 
+        std::array<double, 3> savedStats = {0};
+        std::vector<std::array<double, 5>> savedAttackStats = {{0}};
+
         Weapon(std::string newName,
             std::string newClassName,
             std::string newWeaponFamily,
@@ -195,6 +203,18 @@ class Weapon
 
             // fill in data for weapon from attack list
 
+            this->savedStats[0] = this->magazineCapacity;
+            this->savedStats[1] = this->reloadSpeed;
+            int attackIndex = 0;
+            for (auto& currentAttack : this->attackList)
+            {
+                savedAttackStats[attackIndex][0] = currentAttack.fireRate;
+                savedAttackStats[attackIndex][1] = currentAttack.multishot;
+                savedAttackStats[attackIndex][2] = currentAttack.critChance;
+                savedAttackStats[attackIndex][3] = currentAttack.critMultiplier;
+                savedAttackStats[attackIndex][4] = currentAttack.statusChance;
+                attackIndex++;
+            }
         }
 
         
@@ -226,41 +246,40 @@ class Weapon
                 }
                 for (int i = 3; i < 13; i++)
                 {   // for non IPS types (other than Tau, no mod for that exists (yet))
-                    currentAttack.damage[i] = (currentAttack.damage[i] + (totalBaseDamage * ((currentModConfig.statusTypeModifiers[i] * 0.01))));
+                    if (currentAttack.damage[i] != 0)
+                    {
+                        currentAttack.damage[i] = (currentAttack.damage[i] + (totalBaseDamage * ((currentModConfig.statusTypeModifiers[i] * 0.01))));
+                    }
                 }
+                currentAttack.damageTypesMask |= currentModConfig.modifiedStatusTypeIndicesMask;
             }
         }
         [[msvc::noinline]] void removeModConfig(weaponModConfig& currentModConfig)
         {
             // make it remove mod effects   -   if still adding instead of removing it is extra indented
-            this->magazineCapacity = (this->magazineCapacity * (1 / (1 + (currentModConfig.weaponModifiers[2] * 0.01))));
+            this->magazineCapacity = this->savedStats[0];
             this->statusDuration = 0;
             this->statusDamage = 0;
             this->gunCOModifier = 0;
-            this->reloadSpeed = (this->reloadSpeed * (1 / (1 + (currentModConfig.weaponModifiers[9] * 0.01))));
+            this->reloadSpeed = this->savedStats[1];
             this->baseDamageModifier = 0;
             for (auto& currentAttack : this->attackList)
             {
-                if (currentModConfig.weaponModifiers[11] == 0)
-                {   // if fire rate is not locked, apply mods
-                    currentAttack.fireRate = (currentAttack.fireRate * (1 / (1 + (currentModConfig.weaponModifiers[0] * 0.01))));
-                }
-                if (currentModConfig.weaponModifiers[12] == 0)
-                {   // if multishot is not locked, apply mods
-                    currentAttack.multishot = (currentAttack.multishot * (1 / (1 + (currentModConfig.weaponModifiers[1] * 0.01))));
-                }
-                currentAttack.critChance = (currentAttack.critChance * (1 / (1 + (currentModConfig.weaponModifiers[3] * 0.01))));
-                currentAttack.critMultiplier = (currentAttack.critMultiplier * (1 / (1 + (currentModConfig.weaponModifiers[4] * 0.01))));
-                currentAttack.statusChance = (currentAttack.statusChance * (1 / (1 + (currentModConfig.weaponModifiers[7] * 0.01))));
+                currentAttack.fireRate = savedAttackStats[currentAttack.attackIndex - 1][0];
+                currentAttack.multishot = savedAttackStats[currentAttack.attackIndex - 1][1];
+                currentAttack.critChance = savedAttackStats[currentAttack.attackIndex - 1][2];
+                currentAttack.critMultiplier = savedAttackStats[currentAttack.attackIndex - 1][3];
+                currentAttack.statusChance = savedAttackStats[currentAttack.attackIndex - 1][4];
                 double totalBaseDamage = currentAttack.totalBaseDamage;
-                for (int i = 0; i < 3; i++)
+                for (int statusTypeIndex = 3; statusTypeIndex < 3; statusTypeIndex++)
                 {   // for IPS damage types
-                    currentAttack.damage[i] = (currentAttack.damage[i] * (1 / (1 + (currentModConfig.statusTypeModifiers[i] * 0.01))));
+                    currentAttack.damage[statusTypeIndex] = (currentAttack.damage[statusTypeIndex] * (1 / (1 + (currentModConfig.statusTypeModifiers[statusTypeIndex] * 0.01))));
                 }
-                for (int i = 3; i < 13; i++)
+                for (int statusTypeIndex = 3; statusTypeIndex < 13; statusTypeIndex++)
                 {   // for non IPS types (other than Tau, no mod for that exists (yet))
-                    currentAttack.damage[i] = (currentAttack.damage[i] - (totalBaseDamage * ((currentModConfig.statusTypeModifiers[i] * 0.01))));
+                    currentAttack.damage[statusTypeIndex] = (currentAttack.damage[statusTypeIndex] - (totalBaseDamage * ((currentModConfig.statusTypeModifiers[statusTypeIndex] * 0.01))));
                 }
+                currentAttack.damageTypesMask = currentAttack.baseDamageTypesMask;
             }
         }
 };
