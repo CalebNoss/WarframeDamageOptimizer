@@ -46,14 +46,14 @@ class weaponArcane
         //Entry 4:      //  Cascadia Accuracy   :   Secondary    :   "On Roll:\r\n+300% Critical Chance on Weakpoint Hits for 4s",
         //Entry 5:      //  Cascadia Flare      :   Secondary    :   "On <DT_FIRE_COLOR>Heat Status Effect:\r\n+12% Damage for 10s. Stacks up to 480%.",
         //Entry 6:      //  Conjunction Voltage :   Secondary    :   "On <DT_ELECTRICITY_COLOR>Electricity Status Effect:\r\n+1.5% Reload Speed and +3% Multishot for 12s. Stacks up to 40x.",
-        //Entry 7:      //  Primary Blight      :   Primary    :   "On <DT_POISON_COLOR>Toxin Status Effect:\r\n+3.6% Critical Damage and +1.8% Multishot for 12s. Stacks up to 40x.",
-        //Entry 8:      //  Primary Frostbite   :   Primary    :   "On <DT_FREEZE_COLOR>Cold Status Effect:\r\n+3% Critical Damage and +2.25% Multishot for 12s. Stacks up to 40x.",
-        //Entry 9:      //  Primary Plated Round:   Primary    :   "On Reload: Deal increased damage per round loaded based on max magazine size. Lasts for 10s.",
-        //Entry 10:     //  Melee Duplicate     :   Melee    :   "On Base Critical Hits: 100% chance for your attack to strike a second time",
-        //Entry 11:     //  Melee Exposure      :   Melee    :   "On Ability Cast: Gain 60% Corrosive Damage on Melee strikes for 25s. Stacks up to 240%.",
-        //Entry 12:     //  Secondary Shiver        :   Secondary   :   "Enemies take +45% damage per <DT_FREEZE_COLOR>Cold Status"
-        //Entry 13:     //  Melee Careen            :   Melee       :   "x2.50 Melee Damage against Frozen enemies. On Roll: <DT_FREEZE_COLOR> Freeze enemies in a 5.5m radius with a 2s Cooldown."
-        //Entry 14:     //  Melee Doughty           :   Melee       :   "Gain 1.0x Critical Damage for every 10% <DT_PUNCTURE_COLOR>Puncture Status chance on your Melee Weapon."
+        //Entry 7:      //  Primary Blight      :   Primary      :   "On <DT_POISON_COLOR>Toxin Status Effect:\r\n+3.6% Critical Damage and +1.8% Multishot for 12s. Stacks up to 40x.",
+        //Entry 8:      //  Primary Frostbite   :   Primary      :   "On <DT_FREEZE_COLOR>Cold Status Effect:\r\n+3% Critical Damage and +2.25% Multishot for 12s. Stacks up to 40x.",
+        //Entry 9:      //  Primary Plated Round:   Primary      :   "On Reload: Deal increased damage per round loaded based on max magazine size. Lasts for 10s.",
+        //Entry 10:     //  Melee Duplicate     :   Melee        :   "On Base Critical Hits: 100% chance for your attack to strike a second time",
+        //Entry 11:     //  Melee Exposure      :   Melee        :   "On Ability Cast: Gain 60% Corrosive Damage on Melee strikes for 25s. Stacks up to 240%.",
+        //Entry 12:     //  Secondary Shiver    :   Secondary    :   "Enemies take +45% damage per <DT_FREEZE_COLOR>Cold Status"
+        //Entry 13:     //  Melee Careen        :   Melee        :   "x2.50 Melee Damage against Frozen enemies. On Roll: <DT_FREEZE_COLOR> Freeze enemies in a 5.5m radius with a 2s Cooldown."
+        //Entry 14:     //  Melee Doughty       :   Melee        :   "Gain 1.0x Critical Damage for every 10% <DT_PUNCTURE_COLOR>Puncture Status chance on your Melee Weapon."
 
 
         // Having these be in a separate implementation file was causing weird errors, so they are defined here instead.

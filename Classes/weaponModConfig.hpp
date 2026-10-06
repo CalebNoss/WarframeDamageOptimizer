@@ -18,7 +18,7 @@ class weaponModConfig
         std::vector<int> elementalMods = {};        // indices of current elemental mods (index in reference to validMods)
         
 
-        std::array<double, 13> weaponModifiers = {0};
+        std::array<double, 11> weaponModifiers = {0};
         // the comment is the string to regex for when parsing a mod description, and which value in weaponModifiers to affect for it
         //Entry 0: "Fire Rate" or "Attack Speed"
         //Entry 1: "Multishot"

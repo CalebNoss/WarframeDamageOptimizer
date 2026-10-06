@@ -39,10 +39,12 @@ class attackData
         double fireRate = 0;
         double ammoCost = 0;
 
-        double multishot = 0;
+        double multishot = 1;
 
         double burstCount = 0;
         double burstDelay = 0;
+
+        double chargeTime = 0;
 
         double totalBaseDamage = 0;
 
@@ -51,7 +53,7 @@ class attackData
         double puncturePercent = 0;
         double slashPercent = 0;
 
-        std::string triggerType = "";
+        int triggerTypeIndex = 0;
 
         std::vector<std::string> forcedProcs = {};
 
@@ -88,6 +90,7 @@ class attackData
             double newMultishot,
             double newBurstCount,
             double newBurstDelay,
+            double newChargeTime,
             std::string newTriggerType,
             std::vector<std::string> newForcedProcs,
             std::unordered_map<std::string, double> newDamage
@@ -104,7 +107,7 @@ class attackData
             this->multishot         =   newMultishot;
             this->burstCount        =   newBurstCount;
             this->burstDelay        =   newBurstDelay;
-            this->triggerType       =   newTriggerType;
+            this->chargeTime        =   newChargeTime;
             this->forcedProcs       =   newForcedProcs;
             for (const auto& damageType : newDamage)
             {
@@ -116,6 +119,19 @@ class attackData
             for (const auto& damageType : newDamage)
             {
                 this->totalBaseDamage += damageType.second;
+            }
+
+            if (!newTriggerType.empty())
+            {
+                if (newTriggerType.at(0) == 'C')
+                {   // Charge
+                    this->triggerTypeIndex = 1;
+                }
+                else if (newTriggerType.size() == 5 ||  // Burst or Auto-Burst
+                (newTriggerType.size() == 10 && newTriggerType.at(5) == 'B'))
+                {
+                    this->triggerTypeIndex = 2;
+                }
             }
 
 
@@ -140,25 +156,20 @@ class Weapon
         std::vector<std::string> compatibilityTags = {};    // tags for compatibility
 
         std::string weaponFamily = "";                      // weapon family
-        std::string triggerType = "";                       // trigger type
+        int triggerTypeIndex        = 0;                    // trigger type index (1 == charge) (2 == burst/auto-burst) (0 == anything else)
 
-        double magazineCapacity     = 0;                            // magazine capacity
-        double reloadSpeed  = 0;                                 // reload speed
+        double magazineCapacity     = 0;                          // magazine capacity
+        double reloadSpeed  = 0;                                  // reload speed
 
         double rivenDispo   = 0;  // UNUSED!!! --- Riven Disposition
 
         double spoolSpeed   = 0;                                  // spool rate    (if it exists)
 
-        double reloadDelay  = 0;                                 // reload delay  (if it exists) --  charge weapons!
+        double reloadDelay  = 0;                                  // reload delay  (if it exists) --  charge weapons!
         double reloadRate   = 0;                                  // reload speed  (if it exists) --  charge weapons!        
 
-        double comboDuration        = 0;                               // melee combo duration (if it exists)
-        double heavyAttackDamage    = 0;                           // heavy attack damage  (if it exists)
-
-        double statusDamage         = 0;                                // status damage (from mods)
-        double statusDuration       = 0;                              // status duration (from mods)
-        double gunCOModifier        = 0;                               // Condition Overload modifier type (used in damage calc so number of status on enemy can be used)
-        double baseDamageModifier   = 0;                          // base damage modifier (not applied here so it can be addative vs multiplicitive with gunCO later on)
+        double comboDuration        = 0;                          // melee combo duration (if it exists)
+        double heavyAttackDamage    = 0;                          // heavy attack damage  (if it exists)
 
         std::vector<std::string> innateUpgrades = {};    // built in effects on the weapon  --  // UNUSED!!! for now, too complex for my MVP
 
@@ -187,7 +198,6 @@ class Weapon
             this->name              =   newName;
             this->className         =   newClassName;
             this->weaponFamily      =   newWeaponFamily;
-            this->triggerType       =   newTriggerType;
             this->magazineCapacity  =   newMagazineCapacity;
             this->reloadSpeed       =   newReloadSpeed;
             this->rivenDispo        =   newRivenDisposition;
@@ -200,87 +210,30 @@ class Weapon
             this->innateUpgrades    =   newInnateUpgrades;
             this->attackList        =   newAttackList;
 
+            if (!newTriggerType.empty())
+            {
+                if (newTriggerType.at(0) == 'C')
+                {   // Charge
+                    this->triggerTypeIndex = 1;
+                }
+                else if (newTriggerType.size() == 5 ||  // Burst or Auto-Burst
+                (newTriggerType.size() == 10 && newTriggerType.at(5) == 'B'))
+                {
+                    this->triggerTypeIndex = 2;
+                }
+            }
+
+
             // fill in data for attack list from weapon
 
             // fill in data for weapon from attack list
 
-            this->savedStats[0] = this->magazineCapacity;
-            this->savedStats[1] = this->reloadSpeed;
-            int attackIndex = 0;
             for (auto& currentAttack : this->attackList)
             {
-                savedAttackStats[attackIndex][0] = currentAttack.fireRate;
-                savedAttackStats[attackIndex][1] = currentAttack.multishot;
-                savedAttackStats[attackIndex][2] = currentAttack.critChance;
-                savedAttackStats[attackIndex][3] = currentAttack.critMultiplier;
-                savedAttackStats[attackIndex][4] = currentAttack.statusChance;
-                attackIndex++;
-                if (currentAttack.triggerType.empty())
-                {   // fill in attacks trigger type with weapons i it is empty
-                    currentAttack.triggerType = this->triggerType;
+                if (this->triggerTypeIndex && (!currentAttack.triggerTypeIndex))
+                {   // If charge/burst weapon but not for attack type, carry trigger type down
+                    currentAttack.triggerTypeIndex = this->triggerTypeIndex;
                 }
-                savedAttackDamages.push_back(currentAttack.damage);
-            }
-        }
-
-        
-        [[msvc::noinline]] void applyModConfig(weaponModConfig& currentModConfig)
-        {
-            this->magazineCapacity      = (this->magazineCapacity * (1 + currentModConfig.weaponModifiers[2]));
-            this->statusDuration        = currentModConfig.weaponModifiers[6];
-            this->statusDamage          = currentModConfig.weaponModifiers[8];
-            this->gunCOModifier         = currentModConfig.weaponModifiers[10];
-            this->reloadSpeed           = (this->reloadSpeed * (1 + currentModConfig.weaponModifiers[9]));
-            this->baseDamageModifier    = currentModConfig.weaponModifiers[5];
-            bool isFireRateLocked       = currentModConfig.locksFireRate;
-            bool isMultishotLocked      = currentModConfig.locksMultishot;
-            
-            for (auto& currentAttack : this->attackList)
-            {
-                // put it here so loads before it gets to be needed
-                std::array<double, 14>& damageTypes = currentAttack.damage;
-
-                if (!isFireRateLocked)
-                {   // if fire rate is not locked, apply mods
-                    currentAttack.fireRate      = (currentAttack.fireRate       *   (1 + currentModConfig.weaponModifiers[0]));
-                }
-                if (!isMultishotLocked)
-                {   // if multishot is not locked, apply mods
-                    currentAttack.multishot     = (currentAttack.multishot      *   (1 + currentModConfig.weaponModifiers[1]));
-                }
-                currentAttack.critChance        = (currentAttack.critChance     *   (1 + currentModConfig.weaponModifiers[3]));
-                currentAttack.critMultiplier    = (currentAttack.critMultiplier *   (1 + currentModConfig.weaponModifiers[4]));
-                currentAttack.statusChance      = (currentAttack.statusChance   *   (1 + currentModConfig.weaponModifiers[7]));
-                double totalBaseDamage          = currentAttack.totalBaseDamage;
-                for (int i = 0; i < 3; i++)
-                {   // for IPS damage types
-                    damageTypes[i]              = (damageTypes[i]               *   (1 + currentModConfig.statusTypeModifiers[i]));
-                }
-                for (int i = 3; i < 13; i++)
-                {   // for non IPS types (other than Tau, no mod for that exists (yet))
-                    damageTypes[i] += (totalBaseDamage * currentModConfig.statusTypeModifiers[i]);
-                }
-                currentAttack.damageTypesMask |= currentModConfig.getStatusTypeMask();
-            }
-        }
-        [[msvc::noinline]] void removeModConfig(weaponModConfig& currentModConfig)
-        {
-            // make it remove mod effects   -   if still adding instead of removing it is extra indented
-            this->magazineCapacity = this->savedStats[0];
-            this->statusDuration = 0;
-            this->statusDamage = 0;
-            this->gunCOModifier = 0;
-            this->reloadSpeed = this->savedStats[1];
-            this->baseDamageModifier = 0;
-            for (auto& currentAttack : this->attackList)
-            {
-                currentAttack.fireRate          = savedAttackStats[currentAttack.attackIndex - 1][0];
-                currentAttack.multishot         = savedAttackStats[currentAttack.attackIndex - 1][1];
-                currentAttack.critChance        = savedAttackStats[currentAttack.attackIndex - 1][2];
-                currentAttack.critMultiplier    = savedAttackStats[currentAttack.attackIndex - 1][3];
-                currentAttack.statusChance      = savedAttackStats[currentAttack.attackIndex - 1][4];
-                currentAttack.damage            = savedAttackDamages[currentAttack.attackIndex - 1];
-                currentAttack.damageTypesMask   = currentAttack.baseDamageTypesMask;
             }
         }
 };

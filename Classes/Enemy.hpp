@@ -62,7 +62,7 @@ class Enemy
             {
                 this->addedCritDamage = 0.1 * this->statusCounts.at(4);
             }
-            return this->addedCritDamage;
+            return --this->addedCritDamage;
         };
         double getMultiplierToHealthDamage() {
             if (this->statusCounts.at(12) >= 1) // if more than 1 viral proc, proceed as normal
