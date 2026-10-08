@@ -833,7 +833,7 @@ std::vector<std::string> getValidModTypes(std::string& weaponTypeName, std::vect
         weaponTypeTree[weaponTypeID - 1].name == "Warfan" ||
         weaponTypeTree[weaponTypeID - 1].name == "Whip")
         {
-            continue;   //  only used for stance mods
+            validModTypes.push_back(weaponTypeTree[weaponTypeID - 1].name);
         }
         else if (weaponTypeTree[weaponTypeID - 1].name == "Glaive")
         {
@@ -1576,12 +1576,40 @@ int main()
         }
         else    // for melee weapons
         {
-            for (int arcaneSlotIndex = 0; arcaneSlotIndex < validArcanes.size(); arcaneSlotIndex++)
+            int attackCount = currentWeapon.attackList.size();
+            int arcaneCount = validArcanes.size();
+
+            // ---------------------------------------- FOR EACH ATTACK ----------------------------------------
+            #pragma omp parallel for collapse(2) schedule(dynamic, 1) shared(optimalModChoices, optimalStats, optimalSingleShotArcaneIndex, optimalBurstDPSArcaneIndex, optimalSustainedDPSArcaneIndex)
+            for (int attackIndex = 0 ; attackIndex < attackCount; ++attackIndex)
+            {
+                for (int arcaneSlotIndex = 0; arcaneSlotIndex < arcaneCount; arcaneSlotIndex++)
                 {
+                    attackData currentAttack = currentWeapon.attackList[attackIndex];
+                    std::vector<std::vector<std::array<int, 8>>> localOptimalModChoices = {};
+                    std::vector<std::vector<double>> localOptimalStats = {};
+                    int localOptimalSingleShotArcaneIndex = -1;
+                    int localOptimalBurstDPSArcaneIndex = -1;
+                    int localOptimalSustainedDPSArcaneIndex = -1;
+                    
                     // ---------------------------------------- BASE MOD CONFIG ----------------------------------------
                     weaponModConfig currentModConfig = weaponModConfig();
                     // ---------------------------------------- BASE ENEMY INFO ----------------------------------------
                     Enemy currEnemy = Enemy();
+
+                    for (int i = 0; i < weaponList.at(0).attackList.size(); i++)
+                    {
+                        std::array<int, 8> singleShotModIndices = {};
+                        std::array<int, 8> burstDPSModIndices = {};
+                        std::array<int, 8> sustainedDPSModIndicess = {};
+                        // first vector is a list of the best mods for single shot dps, second vector is a list of the best mods for burst dps, third vector is a list of the bestmods for sustained dps
+                        std::vector<std::array<int, 8>> attacksModLayouts = {singleShotModIndices, burstDPSModIndices, sustainedDPSModIndicess};
+                        localOptimalModChoices.push_back(attacksModLayouts);
+
+                        // first entry is single shot average damage, second entry is burst dps, and third entry is sustained dps
+                        std::vector<double> attacksStats = {0, 0, 0};
+                        localOptimalStats.push_back(attacksStats);
+                    }
 
 
                     currentModConfig.addArcane(validArcanes[arcaneSlotIndex]);
@@ -1730,56 +1758,46 @@ int main()
                                                     currentModConfig.addMod(validMods[modSlotEightIndex], modSlotEightIndex, 7);
 
                                                     // auto weaponBeforeMod = currentWeapon;
-                                                    
-                                                    // ---------------------------------------- FOR EACH ATTACK ----------------------------------------
-                                                    for (auto& currentAttack : currentWeapon.attackList)
-                                                    {                    
-                                                        // ---------------------------------------- RESET ENEMY INFO ----------------------------------------
-                                                        currEnemy.setStatusCounts(baseStatusCounts);
+                                                                   
+                                                    // ---------------------------------------- RESET ENEMY INFO ----------------------------------------
+                                                    currEnemy.setStatusCounts(baseStatusCounts);
 
-                                                        // ---------------------------------------- PRINT CONFIG STATS ----------------------------------------
-                                                        // for (auto& [k, v] : currentModConfig.weaponModifiers)
-                                                        // {
-                                                        //     if (v != 0)
-                                                        //     {
-                                                        //         std::cout << k << ": " << v << std::endl;
-                                                        //     }
-                                                        // }
-                                                        // for (auto& [k, v] : currentModConfig.statusTypeModifiers)
-                                                        // {
-                                                        //     if (v != 0)
-                                                        //     {
-                                                        //         std::cout << k << ": " << v << std::endl;
-                                                        //     }
-                                                        // }
+                                                    // ---------------------------------------- PRINT CONFIG STATS ----------------------------------------
+                                                    // for (auto& [k, v] : currentModConfig.weaponModifiers)
+                                                    // {
+                                                    //     if (v != 0)
+                                                    //     {
+                                                    //         std::cout << k << ": " << v << std::endl;
+                                                    //     }
+                                                    // }
+                                                    // for (auto& [k, v] : currentModConfig.statusTypeModifiers)
+                                                    // {
+                                                    //     if (v != 0)
+                                                    //     {
+                                                    //         std::cout << k << ": " << v << std::endl;
+                                                    //     }
+                                                    // }
 
-                                                        // ---------------------------------------- CALCULATE DAMAGE ----------------------------------------
-                                                        auto [tempAverageShot, tempAverageBurstDPS, tempAverageSustainedDPS] = calculateDPSValuesMelee(currentWeapon, currentAttack, weaponGeneralClassIndex, currEnemy, currentModConfig);
-                                                                // std::cout << "I calculated the DPS!\n";
-                                                        if (tempAverageShot > optimalStats.at(currentAttack.attackIndex - 1).at(0))
-                                                        {
-                                                            optimalStats[currentAttack.attackIndex - 1][0] = tempAverageShot;
-                                                            optimalModChoices[currentAttack.attackIndex - 1][0] = currentModConfig.currentModIndices;
-                                                            optimalSingleShotArcaneIndex = arcaneSlotIndex;
-                                                        }
-                                                        if (tempAverageBurstDPS > optimalStats.at(currentAttack.attackIndex - 1).at(1))
-                                                        {
-                                                            optimalStats[currentAttack.attackIndex - 1][1] = tempAverageBurstDPS;
-                                                            optimalModChoices[currentAttack.attackIndex - 1][1] = currentModConfig.currentModIndices;
-                                                            optimalBurstDPSArcaneIndex = arcaneSlotIndex;
-                                                        }
-                                                        if (tempAverageSustainedDPS > optimalStats.at(currentAttack.attackIndex - 1).at(2))
-                                                        {
-                                                            optimalStats[currentAttack.attackIndex - 1][2] = tempAverageSustainedDPS;
-                                                            optimalModChoices[currentAttack.attackIndex - 1][2] = currentModConfig.currentModIndices;
-                                                            optimalSustainedDPSArcaneIndex = arcaneSlotIndex;
-                                                        }
+                                                    // ---------------------------------------- CALCULATE DAMAGE ----------------------------------------
+                                                    auto [tempAverageShot, tempAverageBurstDPS, tempAverageSustainedDPS] = calculateDPSValuesMelee(currentWeapon, currentAttack, weaponGeneralClassIndex, currEnemy, currentModConfig);
+                                                            // std::cout << "I calculated the DPS!\n";
+                                                    if (tempAverageShot > localOptimalStats.at(currentAttack.attackIndex - 1).at(0))
+                                                    {
+                                                        localOptimalStats[currentAttack.attackIndex - 1][0] = tempAverageShot;
+                                                        localOptimalModChoices[currentAttack.attackIndex - 1][0] = currentModConfig.currentModIndices;
+                                                        localOptimalSingleShotArcaneIndex = arcaneSlotIndex;
+                                                    }
+                                                    if (tempAverageSustainedDPS > localOptimalStats.at(currentAttack.attackIndex - 1).at(2))
+                                                    {
+                                                        localOptimalStats[currentAttack.attackIndex - 1][2] = tempAverageSustainedDPS;
+                                                        localOptimalModChoices[currentAttack.attackIndex - 1][2] = currentModConfig.currentModIndices;
+                                                        localOptimalSustainedDPSArcaneIndex = arcaneSlotIndex;
                                                     }
 
-                                                    if ((++completedCalculations % 10000000) == 0)
-                                                    {   //  print remaining calculation number every 10M completed calcs
-                                                        std::cout << "Remaining: " << (totalCalculations - completedCalculations) << '\n';
-                                                    }
+                                                    // if ((++completedCalculations % 10000000) == 0)
+                                                    // {   //  print remaining calculation number every 10M completed calcs
+                                                    //     std::cout << "Remaining: " << (totalCalculations - completedCalculations) << '\n';
+                                                    // }
 
                                                     currentModConfig.removeMod(validMods[modSlotEightIndex], modSlotEightIndex, 7);    //  Last entry should always be this mod as it is about to move to a lower level
                                                     // Move up a loop
@@ -1853,7 +1871,33 @@ int main()
                         // Move up a loop
                     }
                     currentModConfig.removeArcane(validArcanes[arcaneSlotIndex]);
+
+                    if (localOptimalStats.at(currentAttack.attackIndex - 1).at(0) > optimalStats.at(currentAttack.attackIndex - 1).at(0))
+                    {
+                        #pragma omp critical(globalBestUpdate)
+                        {
+                            if (localOptimalStats.at(currentAttack.attackIndex - 1).at(0) > optimalStats.at(currentAttack.attackIndex - 1).at(0))
+                            {
+                                optimalStats[currentAttack.attackIndex - 1][0] = localOptimalStats[currentAttack.attackIndex - 1][0];
+                                optimalModChoices[currentAttack.attackIndex - 1][0] = localOptimalModChoices[currentAttack.attackIndex - 1][0];
+                                optimalSingleShotArcaneIndex = localOptimalSingleShotArcaneIndex;
+                            }
+                        }
+                    }
+                    if (localOptimalStats.at(currentAttack.attackIndex - 1).at(2) > optimalStats.at(currentAttack.attackIndex - 1).at(2))
+                    {
+                        #pragma omp critical(globalBestUpdate)
+                        {
+                            if (localOptimalStats.at(currentAttack.attackIndex - 1).at(2) > optimalStats.at(currentAttack.attackIndex - 1).at(2))
+                            {
+                                optimalStats[currentAttack.attackIndex - 1][2] = localOptimalStats[currentAttack.attackIndex - 1][2];
+                                optimalModChoices[currentAttack.attackIndex - 1][2] = localOptimalModChoices[currentAttack.attackIndex - 1][2];
+                                optimalSustainedDPSArcaneIndex = localOptimalSustainedDPSArcaneIndex;
+                            }
+                        }
+                    }
                 }
+            }
             for (int i = 0; i < currentWeapon.attackList.size(); i++)
             {
                 std::cout << "For the: " << currentWeapon.name << "'s " << currentWeapon.attackList[i].attackName << " attack, the calculated best stats are as follows: Average shot: " << optimalStats.at(i).at(0) << ", Average burst DPS: " << optimalStats.at(i).at(1) << ", Average Sustained DPS: " << optimalStats.at(i).at(2) << std::endl;
