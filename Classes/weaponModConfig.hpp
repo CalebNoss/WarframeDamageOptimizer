@@ -14,9 +14,8 @@ class weaponModConfig
 
 
     public:
-        std::vector<int> currentModIndices = {};          // indices of current mods (index in reference to validMods)
-        std::vector<int> elementalMods = {};        // indices of current elemental mods (index in reference to validMods)
-        
+        std::array<int, 8> currentModIndices = {};          // indices of current mods (index in reference to validMods)
+        std::array<int, 8> elementalMods = {};        // indices of current elemental mods (index in reference to validMods)
 
         std::array<double, 11> weaponModifiers = {0};
         // the comment is the string to regex for when parsing a mod description, and which value in weaponModifiers to affect for it
@@ -108,7 +107,7 @@ class weaponModConfig
             }
         }
 
-        [[msvc::noinline]] void addMod(weaponMod& currentMod, int modIndex) // make this constructor create a mod based on passed in data. I need to decide how to pass in the data from the json though
+        [[msvc::noinline]] void addMod(weaponMod& currentMod, int modIndex, int modSlot) // make this constructor create a mod based on passed in data. I need to decide how to pass in the data from the json though
         {
             unsigned int indicesToCheck = currentMod.weaponModifierMask;
             while (indicesToCheck)
@@ -131,16 +130,16 @@ class weaponModConfig
             this->locksFireRate = currentMod.locksFireRate;
             this->locksMultishot = currentMod.locksMultishot;
 
-            currentModIndices.push_back(currentMod.indexInValidMods);
+            currentModIndices[modSlot] = currentMod.indexInValidMods;
             this->modStatusTypeMasks[currentModIndices.size() - 1] = currentMod.modifiedElementIndicesMask;
 
             if (currentMod.isElementalMod)
             {
-                elementalMods.push_back(modIndex);
+                elementalMods[modSlot] = currentMod.indexInValidMods;
             }
         }
         
-        [[msvc::noinline]] void removeMod(weaponMod& currentMod, int modIndex) // make this constructor create a mod based on passed in data. I need to decide how to pass in the data from the json though
+        [[msvc::noinline]] void removeMod(weaponMod& currentMod, int modIndex, int modSlot) // make this constructor create a mod based on passed in data. I need to decide how to pass in the data from the json though
         {
             unsigned int indicesToCheck = currentMod.weaponModifierMask;
             while (indicesToCheck)  // until indicesToCheck == 0
@@ -169,13 +168,13 @@ class weaponModConfig
                 this->locksMultishot = false;
             }
 
-            currentModIndices.pop_back();                 //  remove from current mods (will always be last because of how mods are popped)
+            currentModIndices[modSlot] = -1;                 //  remove from current mods (will always be last because of how mods are popped)
 
             this->modStatusTypeMasks[currentModIndices.size()] = 0;
 
             if (currentMod.isElementalMod)
             {
-                this->elementalMods.pop_back();     //  remove from elemental mods (will always be last because of how mods are popped)
+                this->elementalMods[modSlot] = -1;     //  remove from elemental mods (will always be last because of how mods are popped)
             }
         }
 };

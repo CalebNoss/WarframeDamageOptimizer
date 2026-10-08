@@ -1155,16 +1155,16 @@ int main()
     
 
     //  outer layer is for each attack, inner layer is for each type of DPS, then the innermost is the list of mods
-    std::vector<std::vector<std::vector<int>>> optimalModChoices = {};
+    std::vector<std::vector<std::array<int, 8>>> optimalModChoices = {};
     //  outer layer is for each attack, inner layer is for each type of DPS
     std::vector<std::vector<double>> optimalStats = {};
     for (int i = 0; i < weaponList.at(0).attackList.size(); i++)
     {
-        std::vector<int> singleShotModIndices = {};
-        std::vector<int> burstDPSModIndices = {};
-        std::vector<int> sustainedDPSModIndicess = {};
+        std::array<int, 8> singleShotModIndices = {};
+        std::array<int, 8> burstDPSModIndices = {};
+        std::array<int, 8> sustainedDPSModIndicess = {};
         // first vector is a list of the best mods for single shot dps, second vector is a list of the best mods for burst dps, third vector is a list of the bestmods for sustained dps
-        std::vector<std::vector<int>> attacksModLayouts = {singleShotModIndices, burstDPSModIndices, sustainedDPSModIndicess};
+        std::vector<std::array<int, 8>> attacksModLayouts = {singleShotModIndices, burstDPSModIndices, sustainedDPSModIndicess};
         optimalModChoices.push_back(attacksModLayouts);
 
         // first entry is single shot average damage, second entry is burst dps, and third entry is sustained dps
@@ -1189,6 +1189,7 @@ int main()
         totalCalculations = totalCalculations * (validMods.size() - 8 + k) / k;
     }
     totalCalculations = totalCalculations * validArcanes.size();
+    totalCalculations = totalCalculations * weaponList[0].attackList.size();
     unsigned long long completedCalculations = 0;
 
     for (auto& currentWeapon : weaponList)
@@ -1237,7 +1238,7 @@ int main()
                             continue;   //  skip to next mod in this slot
                         }
 
-                        currentModConfig.addMod(validMods[modSlotOneIndex], modSlotOneIndex);
+                        currentModConfig.addMod(validMods[modSlotOneIndex], modSlotOneIndex, 0);
                         // Start lower level loop
                         for (int modSlotTwoIndex = modSlotOneIndex + 1; modSlotTwoIndex < validMods.size() - 6; modSlotTwoIndex++)
                         {
@@ -1255,7 +1256,7 @@ int main()
                                 continue;   //  skip to next mod in this slot
                             }
 
-                            currentModConfig.addMod(validMods[modSlotTwoIndex], modSlotTwoIndex);
+                            currentModConfig.addMod(validMods[modSlotTwoIndex], modSlotTwoIndex, 1);
                             // Start lower level loop
                             for (int modSlotThreeIndex = modSlotTwoIndex + 1; modSlotThreeIndex < validMods.size() - 5; modSlotThreeIndex++)
                             {
@@ -1273,7 +1274,7 @@ int main()
                                     continue;   //  skip to next mod in this slot
                                 }
 
-                                currentModConfig.addMod(validMods[modSlotThreeIndex], modSlotThreeIndex);
+                                currentModConfig.addMod(validMods[modSlotThreeIndex], modSlotThreeIndex, 2);
                                 // Start lower level loop
                                 for (int modSlotFourIndex = modSlotThreeIndex + 1; modSlotFourIndex < validMods.size() - 4; modSlotFourIndex++)
                                 {
@@ -1291,7 +1292,7 @@ int main()
                                         continue;   //  skip to next mod in this slot
                                     }
 
-                                    currentModConfig.addMod(validMods[modSlotFourIndex], modSlotFourIndex);
+                                    currentModConfig.addMod(validMods[modSlotFourIndex], modSlotFourIndex, 3);
                                     // Start lower level loop
                                     for (int modSlotFiveIndex = modSlotFourIndex + 1; modSlotFiveIndex < validMods.size() - 3; modSlotFiveIndex++)
                                     {
@@ -1309,7 +1310,7 @@ int main()
                                             continue;   //  skip to next mod in this slot
                                         }
 
-                                        currentModConfig.addMod(validMods[modSlotFiveIndex], modSlotFiveIndex);
+                                        currentModConfig.addMod(validMods[modSlotFiveIndex], modSlotFiveIndex, 4);
                                         // Start lower level loop
                                         for (int modSlotSixIndex = modSlotFiveIndex + 1; modSlotSixIndex < validMods.size() - 2; modSlotSixIndex++)
                                         {
@@ -1327,7 +1328,7 @@ int main()
                                                 continue;   //  skip to next mod in this slot
                                             }
 
-                                            currentModConfig.addMod(validMods[modSlotSixIndex], modSlotSixIndex);
+                                            currentModConfig.addMod(validMods[modSlotSixIndex], modSlotSixIndex, 5);
                                             // Start lower level loop
                                             for (int modSlotSevenIndex = modSlotSixIndex + 1; modSlotSevenIndex < validMods.size() - 1; modSlotSevenIndex++)
                                             {
@@ -1345,7 +1346,7 @@ int main()
                                                     continue;   //  skip to next mod in this slot
                                                 }
 
-                                                currentModConfig.addMod(validMods[modSlotSevenIndex], modSlotSevenIndex);
+                                                currentModConfig.addMod(validMods[modSlotSevenIndex], modSlotSevenIndex, 6);
                                                 // Start lower level loop
                                                 for (int modSlotEightIndex = modSlotSevenIndex + 1; modSlotEightIndex < validMods.size(); modSlotEightIndex++)
                                                 {
@@ -1363,7 +1364,7 @@ int main()
                                                         continue;   //  skip to next mod in this slot
                                                     }
                                     
-                                                    currentModConfig.addMod(validMods[modSlotEightIndex], modSlotEightIndex);
+                                                    currentModConfig.addMod(validMods[modSlotEightIndex], modSlotEightIndex, 7);
 
                                                     // auto weaponBeforeMod = currentWeapon;
                                                                    
@@ -1413,7 +1414,7 @@ int main()
                                                         std::cout << "Remaining: " << (totalCalculations - completedCalculations) << '\n';
                                                     }
 
-                                                    currentModConfig.removeMod(validMods[modSlotEightIndex], modSlotEightIndex);    //  Last entry should always be this mod as it is about to move to a lower level
+                                                    currentModConfig.removeMod(validMods[modSlotEightIndex], modSlotEightIndex, 7);    //  Last entry should always be this mod as it is about to move to a lower level
                                                     // Move up a loop
                                                     /*
                                                     //  This block checks to see if the mod was different before and after mods were applied (also uncomment the above dfeinition of weaponBeforeMod)
@@ -1463,25 +1464,25 @@ int main()
                                                     }
                                                         */
                                                 }
-                                                currentModConfig.removeMod(validMods[modSlotSevenIndex], modSlotSevenIndex);    //  Last entry should always be this mod as it is about to move to a lower level
+                                                currentModConfig.removeMod(validMods[modSlotSevenIndex], modSlotSevenIndex, 6);    //  Last entry should always be this mod as it is about to move to a lower level
                                                 // Move up a loop
                                             }
-                                            currentModConfig.removeMod(validMods[modSlotSixIndex], modSlotSixIndex);    //  Last entry should always be this mod as it is about to move to a lower level
+                                            currentModConfig.removeMod(validMods[modSlotSixIndex], modSlotSixIndex, 5);    //  Last entry should always be this mod as it is about to move to a lower level
                                             // Move up a loop
                                         }
-                                        currentModConfig.removeMod(validMods[modSlotFiveIndex], modSlotFiveIndex);    //  Last entry should always be this mod as it is about to move to a lower level
+                                        currentModConfig.removeMod(validMods[modSlotFiveIndex], modSlotFiveIndex, 4);    //  Last entry should always be this mod as it is about to move to a lower level
                                         // Move up a loop
                                     }
-                                    currentModConfig.removeMod(validMods[modSlotFourIndex], modSlotFourIndex);    //  Last entry should always be this mod as it is about to move to a lower level
+                                    currentModConfig.removeMod(validMods[modSlotFourIndex], modSlotFourIndex, 3);    //  Last entry should always be this mod as it is about to move to a lower level
                                     // Move up a loop
                                 }
-                                currentModConfig.removeMod(validMods[modSlotThreeIndex], modSlotThreeIndex);    //  Last entry should always be this mod as it is about to move to a lower level
+                                currentModConfig.removeMod(validMods[modSlotThreeIndex], modSlotThreeIndex, 2);    //  Last entry should always be this mod as it is about to move to a lower level
                                 // Move up a loop
                             }
-                            currentModConfig.removeMod(validMods[modSlotTwoIndex], modSlotTwoIndex);    //  Last entry should always be this mod as it is about to move to a lower level
+                            currentModConfig.removeMod(validMods[modSlotTwoIndex], modSlotTwoIndex, 1);    //  Last entry should always be this mod as it is about to move to a lower level
                             // Move up a loop
                         }
-                        currentModConfig.removeMod(validMods[modSlotOneIndex], modSlotOneIndex);    //  Last entry should always be this mod as it is about to move to a lower level
+                        currentModConfig.removeMod(validMods[modSlotOneIndex], modSlotOneIndex, 0);    //  Last entry should always be this mod as it is about to move to a lower level
                         // Move up a loop
                     }
                     currentModConfig.removeArcane(validArcanes[arcaneSlotIndex]);
@@ -1531,7 +1532,7 @@ int main()
                             continue;   //  skip to next mod in this slot
                         }
 
-                        currentModConfig.addMod(validMods[modSlotOneIndex], modSlotOneIndex);
+                        currentModConfig.addMod(validMods[modSlotOneIndex], modSlotOneIndex, 0);
                         // Start lower level loop
                         for (int modSlotTwoIndex = modSlotOneIndex + 1; modSlotTwoIndex < validMods.size() - 6; modSlotTwoIndex++)
                         {
@@ -1549,7 +1550,7 @@ int main()
                                 continue;   //  skip to next mod in this slot
                             }
 
-                            currentModConfig.addMod(validMods[modSlotTwoIndex], modSlotTwoIndex);
+                            currentModConfig.addMod(validMods[modSlotTwoIndex], modSlotTwoIndex, 1);
                             // Start lower level loop
                             for (int modSlotThreeIndex = modSlotTwoIndex + 1; modSlotThreeIndex < validMods.size() - 5; modSlotThreeIndex++)
                             {
@@ -1567,7 +1568,7 @@ int main()
                                     continue;   //  skip to next mod in this slot
                                 }
 
-                                currentModConfig.addMod(validMods[modSlotThreeIndex], modSlotThreeIndex);
+                                currentModConfig.addMod(validMods[modSlotThreeIndex], modSlotThreeIndex, 2);
                                 // Start lower level loop
                                 for (int modSlotFourIndex = modSlotThreeIndex + 1; modSlotFourIndex < validMods.size() - 4; modSlotFourIndex++)
                                 {
@@ -1585,7 +1586,7 @@ int main()
                                         continue;   //  skip to next mod in this slot
                                     }
 
-                                    currentModConfig.addMod(validMods[modSlotFourIndex], modSlotFourIndex);
+                                    currentModConfig.addMod(validMods[modSlotFourIndex], modSlotFourIndex, 3);
                                     // Start lower level loop
                                     for (int modSlotFiveIndex = modSlotFourIndex + 1; modSlotFiveIndex < validMods.size() - 3; modSlotFiveIndex++)
                                     {
@@ -1603,7 +1604,7 @@ int main()
                                             continue;   //  skip to next mod in this slot
                                         }
 
-                                        currentModConfig.addMod(validMods[modSlotFiveIndex], modSlotFiveIndex);
+                                        currentModConfig.addMod(validMods[modSlotFiveIndex], modSlotFiveIndex, 4);
                                         // Start lower level loop
                                         for (int modSlotSixIndex = modSlotFiveIndex + 1; modSlotSixIndex < validMods.size() - 2; modSlotSixIndex++)
                                         {
@@ -1621,7 +1622,7 @@ int main()
                                                 continue;   //  skip to next mod in this slot
                                             }
 
-                                            currentModConfig.addMod(validMods[modSlotSixIndex], modSlotSixIndex);
+                                            currentModConfig.addMod(validMods[modSlotSixIndex], modSlotSixIndex, 5);
                                             // Start lower level loop
                                             for (int modSlotSevenIndex = modSlotSixIndex + 1; modSlotSevenIndex < validMods.size() - 1; modSlotSevenIndex++)
                                             {
@@ -1639,7 +1640,7 @@ int main()
                                                     continue;   //  skip to next mod in this slot
                                                 }
 
-                                                currentModConfig.addMod(validMods[modSlotSevenIndex], modSlotSevenIndex);
+                                                currentModConfig.addMod(validMods[modSlotSevenIndex], modSlotSevenIndex, 6);
                                                 // Start lower level loop
                                                 for (int modSlotEightIndex = modSlotSevenIndex + 1; modSlotEightIndex < validMods.size(); modSlotEightIndex++)
                                                 {
@@ -1657,7 +1658,7 @@ int main()
                                                         continue;   //  skip to next mod in this slot
                                                     }
                                     
-                                                    currentModConfig.addMod(validMods[modSlotEightIndex], modSlotEightIndex);
+                                                    currentModConfig.addMod(validMods[modSlotEightIndex], modSlotEightIndex, 7);
 
                                                     // auto weaponBeforeMod = currentWeapon;
                                                     
@@ -1711,7 +1712,7 @@ int main()
                                                         std::cout << "Remaining: " << (totalCalculations - completedCalculations) << '\n';
                                                     }
 
-                                                    currentModConfig.removeMod(validMods[modSlotEightIndex], modSlotEightIndex);    //  Last entry should always be this mod as it is about to move to a lower level
+                                                    currentModConfig.removeMod(validMods[modSlotEightIndex], modSlotEightIndex, 7);    //  Last entry should always be this mod as it is about to move to a lower level
                                                     // Move up a loop
                                                     /*
                                                     //  This block checks to see if the mod was different before and after mods were applied (also uncomment the above dfeinition of weaponBeforeMod)
@@ -1761,25 +1762,25 @@ int main()
                                                     }
                                                         */
                                                 }
-                                                currentModConfig.removeMod(validMods[modSlotSevenIndex], modSlotSevenIndex);    //  Last entry should always be this mod as it is about to move to a lower level
+                                                currentModConfig.removeMod(validMods[modSlotSevenIndex], modSlotSevenIndex, 6);    //  Last entry should always be this mod as it is about to move to a lower level
                                                 // Move up a loop
                                             }
-                                            currentModConfig.removeMod(validMods[modSlotSixIndex], modSlotSixIndex);    //  Last entry should always be this mod as it is about to move to a lower level
+                                            currentModConfig.removeMod(validMods[modSlotSixIndex], modSlotSixIndex, 5);    //  Last entry should always be this mod as it is about to move to a lower level
                                             // Move up a loop
                                         }
-                                        currentModConfig.removeMod(validMods[modSlotFiveIndex], modSlotFiveIndex);    //  Last entry should always be this mod as it is about to move to a lower level
+                                        currentModConfig.removeMod(validMods[modSlotFiveIndex], modSlotFiveIndex, 4);    //  Last entry should always be this mod as it is about to move to a lower level
                                         // Move up a loop
                                     }
-                                    currentModConfig.removeMod(validMods[modSlotFourIndex], modSlotFourIndex);    //  Last entry should always be this mod as it is about to move to a lower level
+                                    currentModConfig.removeMod(validMods[modSlotFourIndex], modSlotFourIndex, 3);    //  Last entry should always be this mod as it is about to move to a lower level
                                     // Move up a loop
                                 }
-                                currentModConfig.removeMod(validMods[modSlotThreeIndex], modSlotThreeIndex);    //  Last entry should always be this mod as it is about to move to a lower level
+                                currentModConfig.removeMod(validMods[modSlotThreeIndex], modSlotThreeIndex, 2);    //  Last entry should always be this mod as it is about to move to a lower level
                                 // Move up a loop
                             }
-                            currentModConfig.removeMod(validMods[modSlotTwoIndex], modSlotTwoIndex);    //  Last entry should always be this mod as it is about to move to a lower level
+                            currentModConfig.removeMod(validMods[modSlotTwoIndex], modSlotTwoIndex, 1);    //  Last entry should always be this mod as it is about to move to a lower level
                             // Move up a loop
                         }
-                        currentModConfig.removeMod(validMods[modSlotOneIndex], modSlotOneIndex);    //  Last entry should always be this mod as it is about to move to a lower level
+                        currentModConfig.removeMod(validMods[modSlotOneIndex], modSlotOneIndex, 0);    //  Last entry should always be this mod as it is about to move to a lower level
                         // Move up a loop
                     }
                     currentModConfig.removeArcane(validArcanes[arcaneSlotIndex]);
