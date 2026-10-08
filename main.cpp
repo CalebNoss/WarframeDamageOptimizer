@@ -10,6 +10,8 @@
 #include <string>
 #include <cmath>
 #include <algorithm>
+#include <intrin.h>
+#include <immintrin.h>
 // json loading thanks to nlohmann, further info in nlohmann/json.hpp
 
 using json = nlohmann::json;
@@ -37,7 +39,7 @@ json loadJsonFile(std::string fileName)
 }
 
 
-std::array<double, 14> baseStatusDurations = {
+alignas(64) std::array<double, 16> baseStatusDurations = {
     6,          // 0  = Impact = 6
     10,         // 1  = Puncture = 10
     6,          // 2  = Slash = 6
@@ -54,7 +56,7 @@ std::array<double, 14> baseStatusDurations = {
     8           // 13 = Tau = 8
 };
 
-std::array<double, 14> statusCaps = {
+alignas(64) std::array<double, 16> statusCaps = {
             5,              // 0  = Impact = 5
             5,              // 1  = Puncture = 5
             1061109567,     // 2  = Slash = 1061109567
@@ -97,9 +99,10 @@ std::tuple<double, double, double> calculateDPSValuesRanged(Weapon& moddedWeapon
     double fireRateModifier = currModConfig.locksFireRate ? 1.0 : (1 + currModConfig.weaponModifiers[0]);
     double moddedFireRate = currAttack.fireRate * (fireRateModifier);
 
-    uint16_t damageTypesMask = currAttack.damageTypesMask ^ currModConfig.getStatusTypeMask();
 
-    std::array<double, 14> damageTypes = currAttack.damage;
+    unsigned long damageTypesMask = currAttack.damageTypesMask ^ currModConfig.getStatusTypeMask();
+
+    alignas(64) std::array<double, 16> damageTypes = currAttack.damage;
     double totalBaseDamage             = currAttack.totalBaseDamage;
     const double impactDamageAmount = (currAttack.damage[0] * (1 + currModConfig.statusTypeModifiers[0]));   // Impact
     const double punctureDamageAmount = (currAttack.damage[1] * (1 + currModConfig.statusTypeModifiers[1]));   // Puncture
@@ -116,12 +119,10 @@ std::tuple<double, double, double> calculateDPSValuesRanged(Weapon& moddedWeapon
     const double viralDamageAmount = damageTypes[12]   + (totalBaseDamage * currModConfig.statusTypeModifiers[12]);           // Viral
     const double tauDamageAmount = damageTypes[13];           // Tau
 
-
     double totalMiscDamage      = (impactDamageAmount + punctureDamageAmount) + (slashDamageAmount + tauDamageAmount);  // Impact | Puncture | Slash | Tau
     double totalBasicDamage     = (heatDamageAmount + coldDamageAmount) + (electricDamageAmount + toxinDamageAmount);    // Heat | Cold | Electric | Toxin
     double totalCombinedDamage  = (blastDamageAmount + corrosiveDamageAmount) + (gasDamageAmount + magneticDamageAmount) + (radiationDamageAmount + viralDamageAmount);   // Blast | Corrosive | Gas | Magnetic | Radiation | Viral
     totalDamage     =   totalMiscDamage + totalBasicDamage + totalCombinedDamage;
-
 
     damageTypes[0]  = impactDamageAmount;
     damageTypes[1]  = punctureDamageAmount;
@@ -137,56 +138,60 @@ std::tuple<double, double, double> calculateDPSValuesRanged(Weapon& moddedWeapon
     damageTypes[11] = radiationDamageAmount;
     damageTypes[12] = viralDamageAmount;
 
-
-
-
-
-    // std::cout<< "The total damage is: " << totalDamage << std::endl;
-
-    // std::cout << "I summed total damage and got multishot value!\n";
-
-
     double effectiveFireRate = moddedFireRate;
-
     
-    // std::cout << "I calculated the fire rate!\n";
-
-
     // Calculate status amounts on enemy
-    std::array<double, 14>* currStatusCounts = currEnemy.getStatusCounts();
+    alignas(64) std::array<double, 16> currStatusCounts = currEnemy.getStatusCounts();
     
     // setup data so it isn't calculated every loop for optimizing performance
     double totalDamageInverse = 1 / totalDamage;
-    double avgStatusCountConstants = (totalDamageInverse * currAttack.statusChance) * (multishotValue * effectiveFireRate) * (statusDurationModifier * statusChanceModifier); // status duration & chance mods at the end
+    const double avgStatusCountConstants = (totalDamageInverse * currAttack.statusChance) * (multishotValue * effectiveFireRate) * (statusDurationModifier * statusChanceModifier); // status duration & chance mods at the end
     
-    for (int i = 0; i < 14; i++)
-    {
-        if ((damageTypesMask & 1) == 1)  // skip if this damage doesn't exist
-        {
-            // use each types damage as a proportion of totalDamage to get damage distribution
-            // multiply by status chance to get amount applied per hit
-            // multiply by multishot to get amount applied per shot
-            // multiply by effective fire rate to get procs/second
-            // divide by time to expire or something to find amount per second on average considering expiration time
-            // cap at max amount
-            // add to enemy
-            // update damage calculations ot take into account the CC, CD, etc. buffs
-            // double proportionOfTotalDamage = currAttack.damage[i] / totalDamage;
-            //  double statusAppliedPerHit = proportionOfTotalDamage * currAttack.statusChance;
-            //  double statusAppliedPerShot = statusAppliedPerHit * multishotValue;
-            //  double statusAppliedPerSecond = statusAppliedPerShot * effectiveFireRate;
+    alignas(64) const double*   __restrict pointerDamageTypes       =   damageTypes.data();
+    alignas(64) const double*   __restrict pointerStatusDurations   =   baseStatusDurations.data();
+    alignas(64) const double*   __restrict pointerStatusCaps        =   statusCaps.data();
+    alignas(64) double*         __restrict pointerStatusCounts      =   currStatusCounts.data();
 
-            double averageStatusCount = damageTypes[i] * avgStatusCountConstants * baseStatusDurations[i];
+    __m512d statusCountConstant = _mm512_set1_pd(avgStatusCountConstants);
 
-            // round down if above cap
-            double finalStatusCount = std::min(averageStatusCount, statusCaps[i]);
+    // load data for first half
+    __m512d damageTypesA = _mm512_load_pd(pointerDamageTypes);
+    __m512d statusDurationsA = _mm512_load_pd(pointerStatusDurations);
+    __m512d statusCapsA = _mm512_load_pd(pointerStatusCaps);
 
-            distinctStatusCount += (finalStatusCount >= 1);
+    // calculate entries for first half
+    __m512d resultA = _mm512_mul_pd(damageTypesA, statusDurationsA);
+    resultA = _mm512_mul_pd(resultA, statusCountConstant);
+    resultA = _mm512_min_pd(resultA, statusCapsA);
 
-            (*currStatusCounts)[i] = finalStatusCount;
-        }
-        damageTypesMask >>= 1;  // move to the right one to look at the next status type
-    }
+    // store entries for first half
+    _mm512_store_pd(pointerStatusCounts, resultA);
+
+    // load data for second half
+    __m512d damageTypesB = _mm512_load_pd(pointerDamageTypes + 8);
+    __m512d statusDurationsB = _mm512_load_pd(pointerStatusDurations + 8);
+    __m512d statusCapsB = _mm512_load_pd(pointerStatusCaps + 8);
+
+    // calculate entries for second half
+    __m512d resultB = _mm512_mul_pd(damageTypesB, statusDurationsB);
+    resultB = _mm512_mul_pd(resultB, statusCountConstant);
+    resultB = _mm512_min_pd(resultB, statusCapsB);
+
+    // store entries for second half
+    _mm512_store_pd(pointerStatusCounts + 8, resultB);
+
+
+    __m512d oneThreshold = _mm512_set1_pd(1.0);
+
+    __mmask8 maskA = _mm512_cmp_pd_mask(resultA, oneThreshold, _CMP_GE_OQ);
+    __mmask8 maskB = _mm512_cmp_pd_mask(resultB, oneThreshold, _CMP_GE_OQ);
+
+    uint16_t combinedMask = maskA | (static_cast<uint16_t>(maskB) << 8);
+
+    distinctStatusCount = std::popcount(combinedMask);
+
+
+    currEnemy.setStatusCounts(currStatusCounts);
 
     char shotTypeFirstChar = (currAttack.shotType.empty()) ? '1' : currAttack.shotType[0];
     double gunCOMultiplier = 0;
@@ -290,7 +295,7 @@ std::tuple<double, double, double> calculateDPSValuesRangedCharge(Weapon& modded
     double fireRateModifier = currModConfig.locksFireRate ? 1.0 : (1 + currModConfig.weaponModifiers[0]);
     double moddedFireRate = currAttack.fireRate * (fireRateModifier);
 
-    std::array<double, 14> damageTypes = currAttack.damage;
+    alignas(64) std::array<double, 16> damageTypes = currAttack.damage;
     double totalBaseDamage             = currAttack.totalBaseDamage;
     const double impactDamageAmount = (currAttack.damage[0] * (1 + currModConfig.statusTypeModifiers[0]));   // Impact
     const double punctureDamageAmount = (currAttack.damage[1] * (1 + currModConfig.statusTypeModifiers[1]));   // Puncture
@@ -340,7 +345,7 @@ std::tuple<double, double, double> calculateDPSValuesRangedCharge(Weapon& modded
     
 
     // Calculate status amounts on enemy
-    std::array<double, 14>* currStatusCounts = currEnemy.getStatusCounts();
+    alignas(64) std::array<double, 16> currStatusCounts = currEnemy.getStatusCounts();
     uint16_t damageTypesMask = currAttack.damageTypesMask ^ currModConfig.getStatusTypeMask();
     
     // setup data so it isn't calculated every loop for optimizing performance
@@ -371,10 +376,12 @@ std::tuple<double, double, double> calculateDPSValuesRangedCharge(Weapon& modded
 
             distinctStatusCount += (finalStatusCount >= 1);
 
-            (*currStatusCounts)[i] = finalStatusCount;
+            currStatusCounts[i] = finalStatusCount;
         }
         damageTypesMask >>= 1;  // move to the right one to look at the next status type
     }
+
+    currEnemy.setStatusCounts(currStatusCounts);
 
     char shotTypeFirstChar = (currAttack.shotType.empty()) ? '1' : currAttack.shotType[0];
     double gunCOMultiplier = 0;
@@ -478,7 +485,7 @@ std::tuple<double, double, double> calculateDPSValuesRangedBurst(Weapon& moddedW
     double fireRateModifier = currModConfig.locksFireRate ? 1.0 : (1 + currModConfig.weaponModifiers[0]);
     double moddedFireRate = currAttack.fireRate * (fireRateModifier);
 
-    std::array<double, 14> damageTypes = currAttack.damage;
+    alignas(64) std::array<double, 16> damageTypes = currAttack.damage;
     double totalBaseDamage             = currAttack.totalBaseDamage;
     const double impactDamageAmount = (currAttack.damage[0] * (1 + currModConfig.statusTypeModifiers[0]));   // Impact
     const double punctureDamageAmount = (currAttack.damage[1] * (1 + currModConfig.statusTypeModifiers[1]));   // Puncture
@@ -530,7 +537,7 @@ std::tuple<double, double, double> calculateDPSValuesRangedBurst(Weapon& moddedW
     // std::cout << "I calculated the fire rate!\n";
 
     // Calculate status amounts on enemy
-    std::array<double, 14>* currStatusCounts = currEnemy.getStatusCounts();
+    alignas(64) std::array<double, 16> currStatusCounts = currEnemy.getStatusCounts();
     uint16_t damageTypesMask = currAttack.damageTypesMask ^ currModConfig.getStatusTypeMask();
     
     // setup data so it isn't calculated every loop for optimizing performance
@@ -561,10 +568,12 @@ std::tuple<double, double, double> calculateDPSValuesRangedBurst(Weapon& moddedW
 
             distinctStatusCount += (finalStatusCount >= 1);
 
-            (*currStatusCounts)[i] = finalStatusCount;
+            currStatusCounts[i] = finalStatusCount;
         }
         damageTypesMask >>= 1;  // move to the right one to look at the next status type
     }
+
+    currEnemy.setStatusCounts(currStatusCounts);
 
     char shotTypeFirstChar = (currAttack.shotType.empty()) ? '1' : currAttack.shotType[0];
     double gunCOMultiplier = 0;
@@ -667,7 +676,7 @@ std::tuple<double, double, double> calculateDPSValuesMelee(Weapon& moddedWeapon,
     double fireRateModifier = currModConfig.locksFireRate ? 1.0 : (1 + currModConfig.weaponModifiers[0]);
     double moddedFireRate = currAttack.fireRate * (fireRateModifier);
 
-    std::array<double, 14> damageTypes = currAttack.damage;
+    alignas(64) std::array<double, 16> damageTypes = currAttack.damage;
     double totalBaseDamage             = currAttack.totalBaseDamage;
     const double impactDamageAmount = (currAttack.damage[0] * (1 + currModConfig.statusTypeModifiers[0]));   // Impact
     const double punctureDamageAmount = (currAttack.damage[1] * (1 + currModConfig.statusTypeModifiers[1]));   // Puncture
@@ -715,7 +724,7 @@ std::tuple<double, double, double> calculateDPSValuesMelee(Weapon& moddedWeapon,
     double effectiveFireRate = moddedFireRate;    
 
     // Calculate status amounts on enemy
-    std::array<double, 14>* currStatusCounts = currEnemy.getStatusCounts();
+    alignas(64) std::array<double, 16> currStatusCounts = currEnemy.getStatusCounts();
     uint16_t damageTypesMask = currAttack.damageTypesMask ^ currModConfig.getStatusTypeMask();
     
     // setup data so it isn't calculated every loop for optimizing performance
@@ -746,10 +755,12 @@ std::tuple<double, double, double> calculateDPSValuesMelee(Weapon& moddedWeapon,
 
             distinctStatusCount += (finalStatusCount >= 1);
 
-            (*currStatusCounts)[i] = finalStatusCount;
+            currStatusCounts[i] = finalStatusCount;
         }
         damageTypesMask >>= 1;  // move to the right one to look at the next status type
     }
+
+    currEnemy.setStatusCounts(currStatusCounts);
 
     // combined gunCO and damage mod multiplier
     double damageMultiplier = baseDMGModValue * (1 + (gunCOModValue * distinctStatusCount));
@@ -778,7 +789,6 @@ std::tuple<double, double, double> calculateDPSValuesMelee(Weapon& moddedWeapon,
     double averageSustainedDPS = (averageShot * currAttack.fireRate / moddedWeapon.comboDuration);
     return { averageSingleShot, 0, averageSustainedDPS };
 }
-
 
 
 
@@ -1181,7 +1191,7 @@ int main()
     weaponModConfig currentModConfig = weaponModConfig();
     // ---------------------------------------- BASE ENEMY INFO ----------------------------------------
     Enemy currEnemy = Enemy();
-    std::array<double, 14> baseStatusCounts = {0};
+    alignas(64) std::array<double, 16> baseStatusCounts = {0};
 
     unsigned long long totalCalculations = 1;
     for (unsigned long long k = 1; k <= 8; k++)
@@ -1189,6 +1199,7 @@ int main()
         totalCalculations = totalCalculations * (validMods.size() - 8 + k) / k;
     }
     totalCalculations = totalCalculations * validArcanes.size();
+    totalCalculations = totalCalculations * weaponList[0].attackList.size();
     unsigned long long completedCalculations = 0;
 
     for (auto& currentWeapon : weaponList)
@@ -1807,5 +1818,3 @@ int main()
     std::cin.get();
     return 0;
 }
-
-

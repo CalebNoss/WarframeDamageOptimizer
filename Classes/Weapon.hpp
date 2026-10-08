@@ -57,7 +57,7 @@ class attackData
 
         std::vector<std::string> forcedProcs = {};
 
-        std::array<double, 14> damage = {0};
+        alignas(64) std::array<double, 16> damage = {0};
         // the comment is the string to regex for when parsing a mod description
         //Entry 0: {"Impact", 0},              // "<DT_IMPACT_COLOR>Impact"
         //Entry 1: {"Puncture", 0},            // "<DT_PUNCTURE_COLOR>Puncture"
@@ -175,9 +175,9 @@ class Weapon
 
         std::vector<attackData> attackList = {};
 
-        std::array<double, 3> savedStats = {0};
+        alignas(64) std::array<double, 3> savedStats = {0};
         std::vector<std::array<double, 5>> savedAttackStats     = {{0}};
-        std::vector<std::array<double, 14>> savedAttackDamages  = {{0}};
+        std::vector<std::array<double, 16>> savedAttackDamages  = {{0}};
 
         Weapon(std::string newName,
             std::string newClassName,

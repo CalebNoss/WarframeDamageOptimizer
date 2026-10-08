@@ -21,7 +21,7 @@ class weaponArcane
 
         bool pruneThis = false;                             // whether the mod should be pruned (ie: better version exists so don't count in damage calcs, or no affect on damage outcome (for example, ammo max mods))
         
-        std::array<double, 13> weaponModifiers = {0};
+        alignas(64) std::array<double, 16> weaponModifiers = {0};
         // the comment is the string to regex for when parsing a mod description, and which value in weaponModifiers to affect for it
         //Entry 0: "Fire Rate" or "Attack Speed"
         //Entry 1: "Multishot"
@@ -37,7 +37,7 @@ class weaponArcane
         //Entry 11: "Fire Rate cannot be modified"
         //Entry 12: "Multishot cannot be modified"
 
-        std::array<bool, 15> arcaneBuffs = {false};
+        alignas(64) std::array<bool, 16> arcaneBuffs = {false};
         // the comment is the string to regex for when parsing a mod description
         //Entry 0:      //  Secondary Cryogenic :   Secondary    :   "On <DT_PUNCTURE_COLOR>Puncture: Apply 3 <DT_FREEZE_COLOR>Cold stacks on targets within 15m.",
         //Entry 1:      //  Secondary Enervate  :   Secondary    :   "On Hit: Increase Critical Chance by 10%. Resets after 6 Big Critical Hit.",

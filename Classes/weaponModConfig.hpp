@@ -18,7 +18,7 @@ class weaponModConfig
         std::vector<int> elementalMods = {};        // indices of current elemental mods (index in reference to validMods)
         
 
-        std::array<double, 11> weaponModifiers = {0};
+        alignas(64) std::array<double, 16> weaponModifiers = {0};
         // the comment is the string to regex for when parsing a mod description, and which value in weaponModifiers to affect for it
         //Entry 0: "Fire Rate" or "Attack Speed"
         //Entry 1: "Multishot"
@@ -37,7 +37,7 @@ class weaponModConfig
         // "Multishot cannot be modified"
         bool locksMultishot = false;
 
-        std::array<double, 13> statusTypeModifiers = {0};
+        alignas(64) std::array<double, 16> statusTypeModifiers = {0};
         // the comment is the string to regex for when parsing a mod description
         //Entry 0: {"Impact", 0},              // "<DT_IMPACT_COLOR>Impact"
         //Entry 1: {"Puncture", 0},            // "<DT_PUNCTURE_COLOR>Puncture"
@@ -54,7 +54,7 @@ class weaponModConfig
         //Entry 12: {"Viral", 0}                // "<DT_VIRAL_COLOR>Viral"
 
         unsigned int modifiedStatusTypeIndicesMask = 0;
-        std::array<unsigned int, 8> modStatusTypeMasks = {};
+        alignas(64) std::array<unsigned int, 8> modStatusTypeMasks = {};
 
         bool arcaneBuff = false;
         int activeArcaneIndex = -1;
@@ -110,20 +110,24 @@ class weaponModConfig
 
         [[msvc::noinline]] void addMod(weaponMod& currentMod, int modIndex) // make this constructor create a mod based on passed in data. I need to decide how to pass in the data from the json though
         {
-            unsigned int indicesToCheck = currentMod.weaponModifierMask;
-            while (indicesToCheck)
+            if (currentMod.modifiesWeapon)
             {
-                int modifiedStatIndex = std::countr_zero(indicesToCheck);
-                this->weaponModifiers[modifiedStatIndex] += currentMod.weaponModifiers[modifiedStatIndex];
-                indicesToCheck &= indicesToCheck - 1;   //  this gets the result only where these match, subtracting one makes the lowest valued bit shift, so it doesn't match, so it removes the lowest bit set to 1
+                alignas(64) std::array<double, 16> localWeaponModifiers = this->weaponModifiers;
+                unsigned int indicesToCheck = currentMod.weaponModifierMask;
+                while (indicesToCheck)  // until indicesToCheck == 0
+                {
+                    int modifiedStatIndex = std::countr_zero(indicesToCheck);
+                    this->weaponModifiers[modifiedStatIndex] += currentMod.weaponModifiers[modifiedStatIndex];
+                    indicesToCheck &= indicesToCheck - 1;   //  this gets the result only where these match, subtracting one makes the lowest valued bit shift, so it doesn't match, so it removes the lowest bit set to 1
+                }
             }
             if (currentMod.modifiesElements)
             {
-                indicesToCheck = currentMod.modifiedElementIndicesMask;
-                while (indicesToCheck)
+                unsigned int indicesToCheck = currentMod.weaponModifierMask;
+                while (indicesToCheck)  // until indicesToCheck == 0
                 {
-                    int modifiedElementIndex = std::countr_zero(indicesToCheck);
-                    this->statusTypeModifiers[modifiedElementIndex] += currentMod.statusTypeModifiers[modifiedElementIndex];
+                    int modifiedStatIndex = std::countr_zero(indicesToCheck);
+                    this->statusTypeModifiers[modifiedStatIndex] += currentMod.statusTypeModifiers[modifiedStatIndex];
                     indicesToCheck &= indicesToCheck - 1;   //  this gets the result only where these match, subtracting one makes the lowest valued bit shift, so it doesn't match, so it removes the lowest bit set to 1
                 }
             }

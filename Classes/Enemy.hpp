@@ -16,7 +16,7 @@ class Enemy
 
 
 
-        std::array<double, 14> statusCounts = {0};
+        alignas(64) std::array<double, 16> statusCounts = {0};
         //  0   = "Impact"
         //  1   = "Puncture"
         //  2   = "Slash"
@@ -82,9 +82,9 @@ class Enemy
 
         // general getters
         double getHeatInheritDamage() const { return heatInheritDamage; }
-        std::array<double, 14>* getStatusCounts() { return &statusCounts; }
+        std::array<double, 16> getStatusCounts() { return statusCounts; }
 
         // general setters
         void setHeatInheritDamage(double newDamage) { heatInheritDamage = newDamage; }
-        void setStatusCounts(std::array<double, 14> newStatusCounts) { statusCounts = newStatusCounts;}
+        [[msvc::noinline]] void setStatusCounts(std::array<double, 16>& newStatusCounts) { statusCounts = newStatusCounts;}
 };

@@ -21,6 +21,7 @@ class weaponMod
         int indexInValidMods = -1;
 
         bool pruneThis = false;                             // whether the mod should be pruned (ie: better version exists so don't count in damage calcs, or no affect on damage outcome (for example, ammo max mods))
+        bool modifiesWeapon = false;
         bool modifiesElements = false;
         bool isElementalMod = false;
 
@@ -31,7 +32,7 @@ class weaponMod
         unsigned int modifiedElementIndicesMask = 0;
 
 
-        std::array<double, 11> weaponModifiers = {0};
+        alignas(64) std::array<double, 16> weaponModifiers = {0};
         // the comment is the string to regex for when parsing a mod description, and which value in weaponModifiers to affect for it
         //Entry 0: "Fire Rate" or "Attack Speed"
         //Entry 1: "Multishot"
@@ -50,7 +51,7 @@ class weaponMod
         // "Multishot cannot be modified"
         bool locksMultishot = false;
 
-        std::array<double, 13> statusTypeModifiers = {0};
+        alignas(64) std::array<double, 16> statusTypeModifiers = {0};
         // the comment is the string to regex for when parsing a mod description
         //Entry 0: {"Impact", 0},              // "<DT_IMPACT_COLOR>Impact"
         //Entry 1: {"Puncture", 0},            // "<DT_PUNCTURE_COLOR>Puncture"
@@ -131,6 +132,7 @@ class weaponMod
                 // Parse 'Only' and 'On' mods first
                 if (this->description[0] == 'O')
                 {
+                    this->modifiesWeapon = true;
                     if (this->description.find("Only") == 0) // finds if the first match is at index 0
                     {   // because no augment mods the only ones starting with this are cannonade mods (no need to worry about Efficient Beams)
                         if (this->type == "Pistol")
@@ -257,12 +259,14 @@ class weaponMod
                     if (this->description.find("+2 ") == 0)
                     { /// Power Throw: "+2 Punch Through\r\nOn Consecutive throw (Max stacks 3):\r\n+100% Throw Damage"
                         this->weaponModifiers[5] = 300;
+                        this->modifiesWeapon = true;
                     } 
                     
                     // Parse Drifting Contact which also doesn't have a % after the first number
                     else if (this->description.find("+10s ") == 0)
                     { 
                         this->weaponModifiers[7] = 40;
+                        this->modifiesWeapon = true;
                     }
 
                     // parse the other mods
@@ -272,6 +276,7 @@ class weaponMod
                         {
                             if (this->description[2] == '0')
                             {   // mods with an initial value of "+100%"
+                                this->modifiesWeapon = true;
                                 if (this->description[6] == 'M')
                                 {   // Spoiled Strike
                                     this->weaponModifiers[5] = 100;
@@ -292,6 +297,7 @@ class weaponMod
                             }
                             else if (this->description[2] == '1')
                             {   // mods with first value of "+110%"
+                                this->modifiesWeapon = true;
                                 if (this->description[6] == 'M')
                                 {
                                     if (this->description[7] == 'a')
@@ -351,14 +357,17 @@ class weaponMod
                                 else if (this->description[15] == 'C')
                                 {   // Critical Chance
                                     this->weaponModifiers[3] = 120;
+                                    this->modifiesWeapon = true;
                                 }
                                 else if (this->description[15] == 'D')
                                 {   // Critical Damage
                                     this->weaponModifiers[4] = 120;
+                                    this->modifiesWeapon = true;
                                 }
                                 else if (this->description[7] == 'u')
                                 {   // Multishot
                                     this->weaponModifiers[1] = 120;
+                                    this->modifiesWeapon = true;
                                 }
                                 else if (this->description[7] == 'e')
                                 {   // Either Pressure Point, which PPP always beats, or Killing Blow which is only heavy attacks, so pruned for now        -       TODO: add killing blow and stuff
@@ -367,6 +376,7 @@ class weaponMod
                             }
                             else if (this->description[2] == '5')
                             {
+                                this->modifiesWeapon = true;
                                 if (this->description[3] == '5')
                                 {   // Amalgam Serration, never better than Serration so drop it
                                     this->pruneThis = true;
@@ -417,15 +427,18 @@ class weaponMod
                                 else
                                 {   //  Magnum Force, Primed Pressure Point, Serration, Primed Point Blank, or Heavy Caliber
                                     this->weaponModifiers[5] = 165;
+                                    this->modifiesWeapon = true;
                                 }
                             }
                             else if (this->description[2] == '8')
                             {   // Primed Pistol Gambit
                                 this->weaponModifiers[3] = 187;
+                                this->modifiesWeapon = true;
                             }
                         }
                         else if (this->description[1] == '2')
                         {
+                            this->modifiesWeapon = true;
                             if (this->description[2] == '2')
                             {
                                 if (this->name == "Hornet Strike")
@@ -459,6 +472,7 @@ class weaponMod
                         }
                         else if (this->description[1] == '3')
                         {
+                            this->modifiesWeapon = true;
                             if (this->description[3] != '%')
                             {   // Spectral Serration, or Acuity mod, too specific to use for now   TODO: let user decide this
                                 this->pruneThis = true;
@@ -482,6 +496,7 @@ class weaponMod
                         }
                         else if (this->description[1] == '4')
                         {
+                            this->modifiesWeapon = true;
                             if (this->description[2] == '0')
                             {
                                 if (this->description[5] == 'A')
@@ -493,6 +508,7 @@ class weaponMod
                                     this->statusTypeModifiers[5] = 60;
                                     this->isElementalMod = true;
                                     this->modifiesElements = true;
+                                    this->modifiesWeapon = false;
                                 }
                                 else if (this->description[5] == 'M')
                                 {   //  Ice Storm
@@ -529,6 +545,7 @@ class weaponMod
                         }
                         else if (this->description[1] == '5')
                         {
+                            this->modifiesWeapon = true;
                             if (this->description[2] == '0')
                             {
                                 if (this->description[5] == 'R')
@@ -566,11 +583,13 @@ class weaponMod
                                     this->statusTypeModifiers[5] = 60;
                                     this->weaponModifiers[7] = 60;
                                     this->isElementalMod = true;
+                                    this->modifiesWeapon = true;
                                 }
                                 else if (this->description[9] == 'M')
                                 {   //  Magnetic 60/60 mods
                                     this->statusTypeModifiers[10] = 60;
                                     this->isElementalMod = true;
+                                    this->modifiesWeapon = true;
                                     if (this->type == "Rifle")
                                     {   //  Magnetic Capacity
                                         this->weaponModifiers[2] = 40;
@@ -593,11 +612,13 @@ class weaponMod
                                     this->statusTypeModifiers[6] = 60;
                                     this->weaponModifiers[7] = 60;
                                     this->isElementalMod = true;
+                                    this->modifiesWeapon = true;
                                 }
                                 else if (this->description[9] == 'R')
                                 {   //  Radiation 60/60 mods
                                     this->statusTypeModifiers[11] = 60;
                                     this->isElementalMod = true;
+                                    this->modifiesWeapon = true;
                                     if (this->type == "Rifle")
                                     {   //  Radiated Reload
                                         this->weaponModifiers[9] = 40;
@@ -622,11 +643,13 @@ class weaponMod
                                     this->statusTypeModifiers[3] = 60;
                                     this->weaponModifiers[7] = 60;
                                     this->isElementalMod = true;
+                                    this->modifiesWeapon = true;
                                 }
                                 else if (this->description[10] == 'R')
                                 {   // Cold 60/60 mods
                                     this->statusTypeModifiers[4] = 60;
                                     this->isElementalMod = true;
+                                    this->modifiesWeapon = true;
                                     if (this->name == "Chilling Reload")
                                     {   //  Chilling Reload
                                         this->weaponModifiers[9] = 40;
@@ -640,6 +663,7 @@ class weaponMod
                             else if (this->description[5] == 'C')
                             {   //  Critical Damage mods    |   Ravage, Target Cracker, Gladiator Might
                                 this->weaponModifiers[4] = 60;
+                                this->modifiesWeapon = true;
                                 if (this->type == "Rifle")
                                 {   //  Hammer Shot
                                     this->weaponModifiers[7] = 80;
@@ -655,10 +679,12 @@ class weaponMod
                                 this->statusTypeModifiers[3] = 60;
                                 this->isElementalMod = true;
                                 this->modifiesElements = true;
+                                this->modifiesWeapon = true;
                             }
                             else if (this->description[5] == 'F')
                             {   //  Fire rate mods
                                 this->weaponModifiers[0] = 60;
+                                this->modifiesWeapon = true;
                                 if (this->type == "Pistol")
                                 {   //  Lethal Torrent
                                     this->weaponModifiers[1] = 60;
@@ -671,6 +697,7 @@ class weaponMod
                             }
                             else if (this->description[6] == 'a')
                             {   //  Magazine Capacity mods
+                                this->modifiesWeapon = true;
                                 if (this->description[2] == '6')
                                 {   //  Tainted Mag
                                     this->weaponModifiers[2] = 66;
@@ -693,15 +720,18 @@ class weaponMod
                             else if (this->description[6] == 'u')
                             {   //  Vigilante Armaments
                                 this->weaponModifiers[1] = 60;
+                                this->modifiesWeapon = true;
                             }
                             else if (this->description[5] == 'R')
                             {   //  Tactical Pump
                                 this->weaponModifiers[9] = 60;
+                                this->modifiesWeapon = true;
                             }
                             
                         }
                         else if (this->description[1] == '7')
                         {
+                            this->modifiesWeapon = true;
                             if (this->description[2] == '2')
                             {   // Gunslinger
                                 this->weaponModifiers[0] = 72;
@@ -713,6 +743,7 @@ class weaponMod
                         }
                         else if (this->description[1] == '8')
                         {
+                            this->modifiesWeapon = true;
                             if (this->description[2] == '0')
                             {
                                 if (this->description[6] == 'u')
@@ -789,6 +820,7 @@ class weaponMod
                                     }
                                     if (this->setName != "")
                                     {   //  Saxum, Jugulus, or Carnis set
+                                        this->modifiesWeapon = true;
                                         this->weaponModifiers[7] = 60;
                                     }
                                 }
@@ -796,10 +828,12 @@ class weaponMod
                             else if (this->description[5] == 'D')
                             {   //  Point Blank, Augur Pact, Vicious Spread
                                 this->weaponModifiers[5] = 90;
+                                this->modifiesWeapon = true;
                             }
                             else if (this->description[5] == 'F')
                             {   //  Shotgun Barrage
                                 this->weaponModifiers[0] = 90;
+                                this->modifiesWeapon = true;
                                 if (this->name != "Shotgun Barrage")
                                 {   //  Frail Momentum, Vile Acceleration, Anemic Agility
                                     this->weaponModifiers[5] = 15;
@@ -808,9 +842,11 @@ class weaponMod
                             else if (this->description[6] == 'u')
                             {   //  Split Chamber
                                 this->weaponModifiers[1] = 90;
+                                this->modifiesWeapon = true;
                             }
                             else if (this->description[5] == 'S')
                             {   //  Status Chance, Status Damage, and Status Duration mods
+                                this->modifiesWeapon = true;
                                 if (this->description[12] == 'C')
                                 {   //  Rifle Aptitude, Shotgun Savvy, Sure Shot, Melee Prowess
                                     this->weaponModifiers[7] = 90;
@@ -834,6 +870,7 @@ class weaponMod
                             }
                             else if (this->description[5] == 'C')
                             {   //  Crit mods
+                                this->modifiesWeapon = true;
                                 if (this->description[14] == 'C')
                                 {   //  Blunderbuss
                                     this->weaponModifiers[3] = 90;
@@ -845,6 +882,7 @@ class weaponMod
                             }
                             else if (this->description[5] == 'M')
                             {
+                                this->modifiesWeapon = true;
                                 if (this->type == "Dual Daggers")
                                 {   //  Amar's Contempt
                                     this->weaponModifiers[5] = 90;
@@ -868,6 +906,7 @@ class weaponMod
                     {
                         this->weaponModifiers[2] = -60;
                         this->weaponModifiers[9] = 48;
+                        this->modifiesWeapon = true;
                     }
                     /// Hydraulic Gauge: "-60% Weapon Recoil\r\n-10% Magazine Capacity" | PRUNE THIS - no benefit that is tracked
                     /// Hydraulic Chamber: "-60% Weapon Recoil\r\n-10% Magazine Capacity" | PRUNE THIS - no benefit that is tracked
