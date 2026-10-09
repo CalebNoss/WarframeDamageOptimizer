@@ -1,2 +1,7 @@
 /.vs
 *.obj
+*.pdb
+*.exe
+*.ini
+*.ilk
+*.code-workspace

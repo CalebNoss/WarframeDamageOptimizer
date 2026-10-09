@@ -918,7 +918,7 @@ void CreateRenderTarget();
 void CleanupRenderTarget();
 LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
-std::tuple<std::vector<std::vector<std::array<int, 8>>>, std::vector<std::vector<double>>, std::vector<std::array<int, 3>>> calculateBestMods(std::string& weaponName, json& wikiModsData, json& wikiArcaneData, json& wikiPrimaryWeaponData, json& wikiSecondaryWeaponData, json& wikiMeleeWeaponData, int weaponGeneralClassIndex)
+std::tuple<std::vector<std::vector<std::array<std::string, 8>>>, std::vector<std::vector<double>>, std::vector<std::array<std::string, 3>>> calculateBestMods(std::string& weaponName, json& wikiModsData, json& wikiArcaneData, json& wikiPrimaryWeaponData, json& wikiSecondaryWeaponData, json& wikiMeleeWeaponData, int weaponGeneralClassIndex)
 {
     json selectedWeaponType;
     std::vector<weaponType> weaponTypeTree;
@@ -1136,7 +1136,7 @@ std::tuple<std::vector<std::vector<std::array<int, 8>>>, std::vector<std::vector
             currentChosenWeapon.value("Spool", 0.0),             //  spoolSpeed
             currentChosenWeapon.value("ReloadDelay", 0.0),       //  reloadDelay     -   charge weapons
             currentChosenWeapon.value("ReloadRate", 0.0),        //  reloadRate      -   charge weapons
-            currentChosenWeapon.value("ComboDur", 0.0),          //  comboDuration
+            currentChosenWeapon.value("ComboDur", 0.0),          //  comboDuration      TODO: FIX THIS! This is combo duration, not the duration of the combo (this is how long your combo lasts, not the duration of the stance's combo duration)
             currentChosenWeapon.value("HeavyAttack", 0.0),       //  heavyAttackDamage
             currentChosenWeapon.value("CompatibilityTags", std::vector<std::string>{}),   //  compatibilityTags
             currentChosenWeapon.value("DefaultUpgrades", std::vector<std::string>{}),     //  innateUpgrades
@@ -1150,6 +1150,7 @@ std::tuple<std::vector<std::vector<std::array<int, 8>>>, std::vector<std::vector
     std::vector<std::vector<std::array<int, 8>>> optimalModChoices = {};
     //  outer layer is for each attack, inner layer is for each type of DPS
     std::vector<std::vector<double>> optimalStats = {};
+    std::vector<std::array<int, 3>> optimalArcaneIndices = {};
     for (int i = 0; i < weaponList.at(0).attackList.size(); i++)
     {
         std::array<int, 8> singleShotModIndices = {0};
@@ -1162,9 +1163,11 @@ std::tuple<std::vector<std::vector<std::array<int, 8>>>, std::vector<std::vector
         // first entry is single shot average damage, second entry is burst dps, and third entry is sustained dps
         std::vector<double> attacksStats = {0, 0, 0};
         optimalStats.push_back(attacksStats);
+
+        std::array arcaneIndices = {0, 0, 0};
+        optimalArcaneIndices.push_back(arcaneIndices);
     }
 
-    std::vector<std::array<int, 3>> optimalArcaneIndices = {{-1}};
 
     std::array<double, 14> baseStatusCounts = {0};
 
@@ -1588,9 +1591,9 @@ std::tuple<std::vector<std::vector<std::array<int, 8>>>, std::vector<std::vector
 
                     for (int i = 0; i < weaponList.at(0).attackList.size(); i++)
                     {
-                        std::array<int, 8> singleShotModIndices = {};
-                        std::array<int, 8> burstDPSModIndices = {};
-                        std::array<int, 8> sustainedDPSModIndicess = {};
+                        std::array<int, 8> singleShotModIndices = {0};
+                        std::array<int, 8> burstDPSModIndices = {0};
+                        std::array<int, 8> sustainedDPSModIndicess = {0};
                         // first vector is a list of the best mods for single shot dps, second vector is a list of the best mods for burst dps, third vector is a list of the bestmods for sustained dps
                         std::vector<std::array<int, 8>> attacksModLayouts = {singleShotModIndices, burstDPSModIndices, sustainedDPSModIndicess};
                         localOptimalModChoices.push_back(attacksModLayouts);
@@ -1887,25 +1890,45 @@ std::tuple<std::vector<std::vector<std::array<int, 8>>>, std::vector<std::vector
                     }
                 }
             }
-            for (int i = 0; i < currentWeapon.attackList.size(); i++)
-            {
-                std::cout << "For the: " << currentWeapon.name << "'s " << currentWeapon.attackList[i].attackName << " attack, the calculated best stats are as follows: Average shot: " << optimalStats.at(i).at(0) << ", Average burst DPS: " << optimalStats.at(i).at(1) << ", Average Sustained DPS: " << optimalStats.at(i).at(2) << std::endl;
-                std::cout << "Using the following arcane and mods for single shot: \n";
-                std::cout << validArcanes.at(optimalArcaneIndices[i][0]).name << "\n";
-                for (int j = 0; j < 8; j++)
-                {
-                    std::cout << validModNames.at(optimalModChoices.at(i).at(0).at(j)) << "\n";
-                }
-                std::cout << "Using the following arcane and mods for sustained DPS: \n";
-                std::cout << validArcanes.at(optimalArcaneIndices[i][2]).name << "\n";
-                for (int j = 0; j < 8; j++)
-                {
-                    std::cout << validModNames.at(optimalModChoices.at(i).at(2).at(j)) << "\n";
-                }
-            }
         }
     }
-    std::tuple<std::vector<std::vector<std::array<int, 8>>>, std::vector<std::vector<double>>, std::vector<std::array<int, 3>>> returnTuple = {optimalModChoices, optimalStats, optimalArcaneIndices};
+    std::vector<std::vector<std::array<std::string, 8>>> optimalModConfigNames = {};
+    int attackNumberIndex = 0;
+    for (auto& attackInfo : optimalModChoices)
+    {
+        int damageTypeIndex = 0;
+        std::vector<std::array<std::string, 8>> thisAttacksDamageTypesBestMods = {};
+        for (auto& thisDPSTypeModConfig : attackInfo)
+        {
+            int modSlotIndex = 0;
+            std::array<std::string, 8> thisModConfigsNames = {""};
+            for (auto& modIndex : thisDPSTypeModConfig)
+            {
+                thisModConfigsNames[modSlotIndex] = validMods.at(optimalModChoices[attackNumberIndex][damageTypeIndex][modSlotIndex]).name;
+                modSlotIndex++;
+            }
+            thisAttacksDamageTypesBestMods.push_back(thisModConfigsNames);
+            damageTypeIndex++;
+        }
+        optimalModConfigNames.push_back(thisAttacksDamageTypesBestMods);
+        attackNumberIndex++;
+    }
+    std::vector<std::array<std::string, 3>> optimalArcaneNames = {};
+
+        attackNumberIndex = 0;
+        for (auto& attackInfo : optimalModChoices)
+        {
+            int damageTypeIndex = 0;
+            std::array<std::string, 3> thisAttacksDamageTypesBestArcanes = {""};
+            for (auto& thisDPSTypeModConfig : attackInfo)
+            {
+                thisAttacksDamageTypesBestArcanes[damageTypeIndex] = validArcanes.at(optimalArcaneIndices[attackNumberIndex][damageTypeIndex]).name;
+                damageTypeIndex++;
+            }
+            optimalArcaneNames.push_back(thisAttacksDamageTypesBestArcanes);
+            attackNumberIndex++;
+        }
+    std::tuple<std::vector<std::vector<std::array<std::string, 8>>>, std::vector<std::vector<double>>, std::vector<std::array<std::string, 3>>> returnTuple = {optimalModConfigNames, optimalStats, optimalArcaneNames};
     return returnTuple;
 }
 
@@ -1925,8 +1948,8 @@ int main()
     json wikiArcaneData = loadJsonFile("wikiData/wikiExportArcanes.json");
 
 
-    std::tuple<std::vector<std::vector<std::array<int, 8>>>, std::vector<std::vector<double>>, std::vector<std::array<int, 3>>> resultTuple = {{{{0}}}, {{0.0}}, {{0}}};
-    double calculationTime = 0;
+    std::tuple<std::vector<std::vector<std::array<std::string, 8>>>, std::vector<std::vector<double>>, std::vector<std::array<std::string, 3>>> resultTuple = {{{{""}}}, {{0.0}}, {{""}}};
+    double calculationTime = 0.0;
 
     // ---------------------------------------- START USER GUI ----------------------------------------
     // Make process DPI aware and obtain main monitor scale
@@ -2022,8 +2045,94 @@ int main()
                 ImGui::Text(std::to_string(calculationTime).c_str());
                 ImGui::SameLine();
                 ImGui::Text(" seconds");
-            }
+                
 
+                // for each attack
+                int attackID = 0;
+                for (auto& attackInfo : std::get<0>(resultTuple))
+                {
+                    ImGui::Text("For attack number ");
+                    ImGui::SameLine();
+                    ImGui::Text(std::to_string(attackID).c_str());
+
+                    // for each damage type
+                    ImGui::Text("Average single shot damage: ");
+                    ImGui::SameLine();
+                    ImGui::Text(std::to_string(std::get<1>(resultTuple)[attackID][0]).c_str());
+                    ImGui::Text("Using the following arcane and mods:");
+                    ImGui::Text(std::get<2>(resultTuple)[attackID][0].c_str());
+                    for (int i = 0; i < 3; ++i)
+                    {
+                        ImGui::Text(std::get<0>(resultTuple)[attackID][0][i].c_str());
+                        ImGui::SameLine();
+                        ImGui::Text(", ");
+                        ImGui::SameLine();
+                    }
+                    ImGui::Text(std::get<0>(resultTuple)[attackID][0][3].c_str());
+
+                    for (int i = 4; i < 7; ++i)
+                    {
+                        ImGui::Text(std::get<0>(resultTuple)[attackID][0][i].c_str());
+                        ImGui::SameLine();
+                        ImGui::Text(", ");
+                        ImGui::SameLine();
+                    }
+                    ImGui::Text(std::get<0>(resultTuple)[attackID][0][7].c_str());
+
+                    if (selectedWeaponType != 2)
+                    {
+                        // for each damage type
+                        ImGui::Text("Average burst DPS: ");
+                        ImGui::SameLine();
+                        ImGui::Text(std::to_string(std::get<1>(resultTuple)[attackID][1]).c_str());
+                        ImGui::Text("Using the following arcane and mods:");
+                        ImGui::Text(std::get<2>(resultTuple)[attackID][1].c_str());
+                        for (int i = 0; i < 3; ++i)
+                        {
+                            ImGui::Text(std::get<0>(resultTuple)[attackID][1][i].c_str());
+                            ImGui::SameLine();
+                            ImGui::Text(", ");
+                            ImGui::SameLine();
+                        }
+                        ImGui::Text(std::get<0>(resultTuple)[attackID][1][3].c_str());
+
+                        for (int i = 4; i < 7; ++i)
+                        {
+                            ImGui::Text(std::get<0>(resultTuple)[attackID][1][i].c_str());
+                            ImGui::SameLine();
+                            ImGui::Text(", ");
+                            ImGui::SameLine();
+                        }
+                        ImGui::Text(std::get<0>(resultTuple)[attackID][1][7].c_str());
+                    }
+
+                    // for each damage type
+                    ImGui::Text("Average sustained DPS: ");
+                    ImGui::SameLine();
+                    ImGui::Text(std::to_string(std::get<1>(resultTuple)[attackID][2]).c_str());
+                    ImGui::Text("Using the following arcane and mods:");
+                    ImGui::Text(std::get<2>(resultTuple)[attackID][2].c_str());
+                    for (int i = 0; i < 3; ++i)
+                    {
+                        ImGui::Text(std::get<0>(resultTuple)[attackID][2][i].c_str());
+                        ImGui::SameLine();
+                        ImGui::Text(", ");
+                        ImGui::SameLine();
+                    }
+                    ImGui::Text(std::get<0>(resultTuple)[attackID][2][3].c_str());
+
+                    for (int i = 4; i < 7; ++i)
+                    {
+                        ImGui::Text(std::get<0>(resultTuple)[attackID][2][i].c_str());
+                        ImGui::SameLine();
+                        ImGui::Text(", ");
+                        ImGui::SameLine();
+                    }
+                    ImGui::Text(std::get<0>(resultTuple)[attackID][2][7].c_str());
+
+                    attackID++;
+                }
+            }
         }
         ImGui::End();
 
