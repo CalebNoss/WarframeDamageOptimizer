@@ -34,7 +34,7 @@ Work Stages
 3. Find best mods for raw damage
     3a. Find way to turn written description into stats that can be used    // I wrote an entire manual parser for maximum control...   ------------------------------------ DONE
 
-4. Account for Status DOT
+4. Account for Status DOT //  -------------------------------- DONE
 
 5. Account for Satus Effect Debuffs //  -------------------------------- DONE
 
@@ -54,10 +54,6 @@ Work Stages
 
 // *** General info for project pseudocode ***
 
-// to make this better on resume I need to pull data from the API
-// I also should make the profile info viewer pull data fresh from a user entered code, can explain how to get from EE.log file, would let me push to GitHub and share it
-// figure out what on earth is up with the formatting of that and the json, make it fix formatting automatically
-// also use wiki data for mods & primary/secondary/melees, it is more thorough
 
 
 // load all items
@@ -67,26 +63,27 @@ Work Stages
 //  get weapon
 //
 //  filter mods for compatible ones only
-//  prune lower copies of mods (if prime exists, ignore base)
-//  prune certain mods based on user input (spectral serration, acuity, etc.)
-//  parse mods to get actual effects on weapon from description info    -   I could just pull from the wiki that has these better organized I think.
+//  prune lower copies of mods (for example if prime exists, ignore base)
+//  prune certain mods based on user input (spectral serration, acuity, etc.) (for now just pruned automatically if they are too specific, like weakpoint only or only midair or something)
+//  parse mods to get actual effects on weapon from description info - manually written parser for now, allows maximum control
 //  
 //  Filter compatible arcanes
 //  prune arcanes based on user choices
 //  
-//  for each possible arcane
-//      copy weapon to test mods
-//          8 nested for loops. First starts at index 1 and ends at index END-7, last starts at index 8 and ends at index END
-//              in each for loop:
-//                  1. if mod in [current loop selection] is incompatible with any mod selected by [higher ranked loop] skip to next mod
-//                  2. try this mod in this slot
-//              at the end of the loops, then 8 mods that are compatible are chosen:
-//                  if elemental mods are included
-//                      for permutation of elemental mods
-//                          calculate damage for that order of elemental mods in this setup
-//                              if damage is higher for single shot, burst, or sustained dps then log arcane & mod config for that value (single shot/burst/sustained)
-//                              next mod at top for loop
-//                              if top for loop is at the end, increment previous loop and try again starting from previous loop+1 to loops final spot
+//  for each attack on the weapon
+//    for each possible arcane
+//          copy weapon to test mods
+//              8 nested for loops. First starts at index 1 and ends at index END-7, last starts at index 8 and ends at index END
+//                  in each for loop:
+//                      1. if mod in [current loop selection] is incompatible with any mod selected by [higher ranked loop] skip to next mod
+//                      2. try this mod in this slot
+//                at the end of the loops, then 8 mods that are compatible are chosen:
+//                      if elemental mods are included
+//                          for permutation of elemental mods
+//                              calculate damage for that order of elemental mods in this setup
+//                                  if damage is higher for single shot, burst, or sustained dps then log arcane & mod config for that value (single shot/burst/sustained)
+//                                  next mod at top for loop
+//                                  if top for loop is at the end, increment previous loop and try again starting from previous loop+1 to loops final spot
 
 
 
@@ -114,4 +111,6 @@ Work Stages
 
 
 // TODO List:
-1. 
+1. Allow user to set minimum stats to bound possible branches to only try calculating if the minimum stats (fire rate & reload speed, probably nothing else for now as it would be mostly QOL) would not be reached by the mod config
+2. Make custom damage calcs for the more complex arcanes
+3. Allow user to turn on warframe based buffs (Warframe arcanes like arachne, abilities like Roar, Xata's Whisper, etc.)
