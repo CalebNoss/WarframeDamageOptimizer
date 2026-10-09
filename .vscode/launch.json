@@ -2,14 +2,35 @@
   "version": "0.2.0",
   "configurations": [
     {
+      "name": "Debug MSVC C++20",
+      "type": "cppvsdbg",
+      "request": "launch",
+      "args": [],
+      "stopAtEntry": false,
+      "externalConsole": true,
+      "cwd": "${workspaceFolder}",
+      "program": "${workspaceFolder}/main.exe",
+    },
+    {
+      "name": "(Windows) Launch",
+      "type": "cppvsdbg",
+      "request": "launch",
+      "program": "enter program name, for example ${workspaceFolder}/a.exe",
+      "args": [],
+      "stopAtEntry": false,
+      "cwd": "${fileDirname}",
+      "environment": [],
+      "console": "internalConsole"
+    },
+    {
       "name": "C/C++ Runner: Debug Session",
       "type": "cppdbg",
       "request": "launch",
       "args": [],
       "stopAtEntry": false,
       "externalConsole": true,
-      "cwd": "c:/Users/Caleb/Documents/C++ Projects/WarframeDamageOptimizer/Classes",
-      "program": "c:/Users/Caleb/Documents/C++ Projects/WarframeDamageOptimizer/Classes/build/Debug/outDebug",
+      "cwd": "c:/Users/Caleb/Documents/C++ Projects/WarframeDamageOptimizer",
+      "program": "c:/Users/Caleb/Documents/C++ Projects/WarframeDamageOptimizer/build/Debug/outDebug",
       "MIMode": "gdb",
       "miDebuggerPath": "gdb",
       "setupCommands": [

@@ -2,20 +2,27 @@
     "tasks": [
         {
             "type": "cppbuild",
-            "label": "C/C++: g++.exe build active file",
-            "command": "C:\\msys64\\ucrt64\\bin\\g++.exe",
+            "label": "Build with AVX512 & C++20",
+            "command": "cl.exe",
             "args": [
-                "-fdiagnostics-color=always",
-                "-g",
-                "${file}",
-                "-o",
-                "${fileDirname}\\${fileBasenameNoExtension}.exe"
+                "/O2",
+                "/arch:AVX512",
+                "/Zi",
+                "/EHsc",
+                "/std:c++20",
+                "/openmp:llvm",
+                "${workspaceFolder}/*.cpp",
+                "${workspaceFolder}/imgui/*.cpp",
+                "/link",
+                "/DEBUG",
+                "d3d11.lib",
+                "/OUT:${workspaceFolder}/main.exe"
             ],
             "options": {
-                "cwd": "${fileDirname}"
+                "cwd": "${workspaceFolder}"
             },
             "problemMatcher": [
-                "$gcc"
+                "$msCompile"
             ],
             "group": {
                 "kind": "build",

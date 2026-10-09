@@ -1,8 +1,11 @@
+#pragma once
 #include "nlohmann/json.hpp"
+#include "imgui/imgui.h"
+#include "imgui/imgui_stdlib.h"
+#include "imgui/imgui_impl_win32.h"
+#include "imgui/imgui_impl_dx11.h"
 #include "Classes/Enemy.hpp"
-#include "Classes/weaponMod.hpp"
 #include "Classes/weaponModConfig.hpp"
-#include "Classes/weaponArcane.hpp"
 #include "Classes/Weapon.hpp"
 #include <fstream>
 #include <iostream>
@@ -10,6 +13,9 @@
 #include <string>
 #include <cmath>
 #include <algorithm>
+#include <chrono>
+#include <d3d11.h>
+#include <tchar.h>
 #include <omp.h>
 // json loading thanks to nlohmann, further info in nlohmann/json.hpp
 
@@ -54,7 +60,6 @@ std::array<double, 14> baseStatusDurations = {
     6,          // 12 = Viral = 6
     8           // 13 = Tau = 8
 };
-
 std::array<double, 14> statusCaps = {
             5,              // 0  = Impact = 5
             5,              // 1  = Puncture = 5
@@ -71,7 +76,13 @@ std::array<double, 14> statusCaps = {
             10,             // 12 = Viral = 10
             10              // 13 = Tau = 10}
         };
-
+std::array<double, 5> dotModifier = {
+    0.35,
+    0.5,
+    0.5,
+    0.5,
+    0.5
+};
 
 std::tuple<double, double, double> calculateDPSValuesRanged(Weapon& moddedWeapon, attackData& currAttack, int weaponTypeIndex, Enemy& currEnemy, weaponModConfig& currModConfig)
 {
@@ -180,7 +191,7 @@ std::tuple<double, double, double> calculateDPSValuesRanged(Weapon& moddedWeapon
             double averageStatusCount = damageTypes[i] * avgStatusCountConstants * baseStatusDurations[i];
 
             // round down if above cap
-            double finalStatusCount = std::min(averageStatusCount, statusCaps[i]);
+            double finalStatusCount = (std::min)(averageStatusCount, statusCaps[i]);
 
             distinctStatusCount += (finalStatusCount >= 1);
 
@@ -212,7 +223,7 @@ std::tuple<double, double, double> calculateDPSValuesRanged(Weapon& moddedWeapon
 
     // apply gunCO and base damage mods
     totalDamage = totalDamage * damageMultiplier;
-    
+
     double moddedCritChance = currAttack.critChance * criticalChanceModifier;
     double moddedCritMultiplier = currAttack.critMultiplier * criticalDamageModifier;
 
@@ -227,11 +238,20 @@ std::tuple<double, double, double> calculateDPSValuesRanged(Weapon& moddedWeapon
         // std::cout << "I got here three!\n";
     // std::cout << "totalDamage is: " << totalDamage << " crit chance is: " << currAttack.critChance << " crit damage is: " << currAttack.critMultiplier << " and avg single shot dmg is: " << averageSingleShot << std::endl;
 
+    double baseAvgDot = totalDamage * multishotValue * statusDamageModifier * 6 * statusDurationModifier;
+    double avgSlashDot = baseAvgDot * dotModifier[0];
+    double avgElectricityDot = baseAvgDot * dotModifier[1] * (1 + currModConfig.statusTypeModifiers[5]);
+    double avgHeatDot = baseAvgDot * dotModifier[2] * (1 + currModConfig.statusTypeModifiers[3]);
+    double avgToxinDot = baseAvgDot * dotModifier[3] * (1 + currModConfig.statusTypeModifiers[6]);
+    double avgGasDot = baseAvgDot * dotModifier[4] * (1 + currModConfig.statusTypeModifiers[9]);
+
+    double totalAvgDot = (avgSlashDot + avgElectricityDot + avgHeatDot + avgToxinDot + avgGasDot) * totalDamageInverse;
+    double avgTotalAvgDot = totalAvgDot * currAttack.statusChance * statusChanceModifier * ((1 + (statusAndModdedCritChance) * (statusAndModdedCritMultiplier)));;
 
     // Starting Values
-    double averageBurstDPS = 0;
+    double averageBurstDPS = avgTotalAvgDot;
     double numberOfShotsPerMag = 0;
-    double averageSustainedDPS = 0;
+    double averageSustainedDPS = avgTotalAvgDot;
     double ammoCostPerShotInverse = 1;
     double percentOfTimeShooting = 0;
 
@@ -242,7 +262,7 @@ std::tuple<double, double, double> calculateDPSValuesRanged(Weapon& moddedWeapon
 
     // avg burst dps (held but no reloads)
     // apply viral + corrosive to damage now too
-    averageBurstDPS = averageShot * effectiveFireRate;
+    averageBurstDPS += averageShot * effectiveFireRate;
 
     // used to calculate time reloading
     if (moddedWeapon.magazineCapacity)  // anything but 0
@@ -265,7 +285,7 @@ std::tuple<double, double, double> calculateDPSValuesRanged(Weapon& moddedWeapon
     // std::cout << "Magazine Capacity: " << moddedWeapon.magazineCapacity << std::endl;
     // std::cout << "Reload speed: " << moddedWeapon.reloadSpeed << std::endl;
     // Avg sustained dps
-    averageSustainedDPS = averageBurstDPS * percentOfTimeShooting;
+    averageSustainedDPS += averageBurstDPS * percentOfTimeShooting;
     return { averageSingleShot, averageBurstDPS, averageSustainedDPS };
 }
 std::tuple<double, double, double> calculateDPSValuesRangedCharge(Weapon& moddedWeapon, attackData& currAttack, int weaponTypeIndex, Enemy& currEnemy, weaponModConfig& currModConfig)
@@ -368,7 +388,7 @@ std::tuple<double, double, double> calculateDPSValuesRangedCharge(Weapon& modded
             double averageStatusCount = damageTypes[i] * avgStatusCountConstants * baseStatusDurations[i];
 
             // round down if above cap
-            double finalStatusCount = std::min(averageStatusCount, statusCaps[i]);
+            double finalStatusCount = (std::min)(averageStatusCount, statusCaps[i]);
 
             distinctStatusCount += (finalStatusCount >= 1);
 
@@ -415,11 +435,20 @@ std::tuple<double, double, double> calculateDPSValuesRangedCharge(Weapon& modded
         // std::cout << "I got here three!\n";
     // std::cout << "totalDamage is: " << totalDamage << " crit chance is: " << currAttack.critChance << " crit damage is: " << currAttack.critMultiplier << " and avg single shot dmg is: " << averageSingleShot << std::endl;
 
+    double baseAvgDot = totalDamage * multishotValue * statusDamageModifier * 6 * statusDurationModifier;
+    double avgSlashDot = baseAvgDot * dotModifier[0];
+    double avgElectricityDot = baseAvgDot * dotModifier[1] * (1 + currModConfig.statusTypeModifiers[5]);
+    double avgHeatDot = baseAvgDot * dotModifier[2] * (1 + currModConfig.statusTypeModifiers[3]);
+    double avgToxinDot = baseAvgDot * dotModifier[3] * (1 + currModConfig.statusTypeModifiers[6]);
+    double avgGasDot = baseAvgDot * dotModifier[4] * (1 + currModConfig.statusTypeModifiers[9]);
+
+    double totalAvgDot = (avgSlashDot + avgElectricityDot + avgHeatDot + avgToxinDot + avgGasDot) * totalDamageInverse;
+    double avgTotalAvgDot = totalAvgDot * currAttack.statusChance * statusChanceModifier * ((1 + (statusAndModdedCritChance) * (statusAndModdedCritMultiplier)));;
 
     // Starting Values
-    double averageBurstDPS = 0;
+    double averageBurstDPS = avgTotalAvgDot;
     double numberOfShotsPerMag = 0;
-    double averageSustainedDPS = 0;
+    double averageSustainedDPS = avgTotalAvgDot;
     double ammoCostPerShotInverse = 1;
     double percentOfTimeShooting = 0;
 
@@ -430,7 +459,7 @@ std::tuple<double, double, double> calculateDPSValuesRangedCharge(Weapon& modded
 
     // avg burst dps (held but no reloads)
     // apply viral + corrosive to damage now too
-    averageBurstDPS = averageShot * effectiveFireRate;
+    averageBurstDPS += averageShot * effectiveFireRate;
 
     // used to calculate time reloading
     if (moddedWeapon.magazineCapacity)  // anything but 0
@@ -453,7 +482,7 @@ std::tuple<double, double, double> calculateDPSValuesRangedCharge(Weapon& modded
     // std::cout << "Magazine Capacity: " << moddedWeapon.magazineCapacity << std::endl;
     // std::cout << "Reload speed: " << moddedWeapon.reloadSpeed << std::endl;
     // Avg sustained dps
-    averageSustainedDPS = averageBurstDPS * percentOfTimeShooting;
+    averageSustainedDPS += averageBurstDPS * percentOfTimeShooting;
     return { averageSingleShot, averageBurstDPS, averageSustainedDPS };
 }
 std::tuple<double, double, double> calculateDPSValuesRangedBurst(Weapon& moddedWeapon, attackData& currAttack, int weaponTypeIndex, Enemy& currEnemy, weaponModConfig& currModConfig)
@@ -558,7 +587,7 @@ std::tuple<double, double, double> calculateDPSValuesRangedBurst(Weapon& moddedW
             double averageStatusCount = damageTypes[i] * avgStatusCountConstants * baseStatusDurations[i];
 
             // round down if above cap
-            double finalStatusCount = std::min(averageStatusCount, statusCaps[i]);
+            double finalStatusCount = (std::min)(averageStatusCount, statusCaps[i]);
 
             distinctStatusCount += (finalStatusCount >= 1);
 
@@ -604,12 +633,22 @@ std::tuple<double, double, double> calculateDPSValuesRangedBurst(Weapon& moddedW
     double averageSingleShot = (totalDamage * (1 + (moddedCritChance * (moddedCritMultiplier - 1))));
         // std::cout << "I got here three!\n";
     // std::cout << "totalDamage is: " << totalDamage << " crit chance is: " << currAttack.critChance << " crit damage is: " << currAttack.critMultiplier << " and avg single shot dmg is: " << averageSingleShot << std::endl;
+    
+    double baseAvgDot = totalDamage * multishotValue * statusDamageModifier * 6 * statusDurationModifier;
+    double avgSlashDot = baseAvgDot * dotModifier[0];
+    double avgElectricityDot = baseAvgDot * dotModifier[1] * (1 + currModConfig.statusTypeModifiers[5]);
+    double avgHeatDot = baseAvgDot * dotModifier[2] * (1 + currModConfig.statusTypeModifiers[3]);
+    double avgToxinDot = baseAvgDot * dotModifier[3] * (1 + currModConfig.statusTypeModifiers[6]);
+    double avgGasDot = baseAvgDot * dotModifier[4] * (1 + currModConfig.statusTypeModifiers[9]);
+
+    double totalAvgDot = (avgSlashDot + avgElectricityDot + avgHeatDot + avgToxinDot + avgGasDot) * totalDamageInverse;
+    double avgTotalAvgDot = totalAvgDot * currAttack.statusChance * statusChanceModifier * ((1 + (statusAndModdedCritChance) * (statusAndModdedCritMultiplier)));;
 
 
     // Starting Values
-    double averageBurstDPS = 0;
+    double averageBurstDPS = avgTotalAvgDot;
     double numberOfShotsPerMag = 0;
-    double averageSustainedDPS = 0;
+    double averageSustainedDPS = avgTotalAvgDot;
     double ammoCostPerShotInverse = 1;
     double percentOfTimeShooting = 0;
 
@@ -620,7 +659,7 @@ std::tuple<double, double, double> calculateDPSValuesRangedBurst(Weapon& moddedW
 
     // avg burst dps (held but no reloads)
     // apply viral + corrosive to damage now too
-    averageBurstDPS = averageShot * effectiveFireRate;
+    averageBurstDPS += averageShot * effectiveFireRate;
 
     // used to calculate time reloading
     if (moddedWeapon.magazineCapacity)  // anything but 0
@@ -643,7 +682,7 @@ std::tuple<double, double, double> calculateDPSValuesRangedBurst(Weapon& moddedW
     // std::cout << "Magazine Capacity: " << moddedWeapon.magazineCapacity << std::endl;
     // std::cout << "Reload speed: " << moddedWeapon.reloadSpeed << std::endl;
     // Avg sustained dps
-    averageSustainedDPS = averageBurstDPS * percentOfTimeShooting;
+    averageSustainedDPS += averageBurstDPS * percentOfTimeShooting;
     return { averageSingleShot, averageBurstDPS, averageSustainedDPS };
 }
 std::tuple<double, double, double> calculateDPSValuesMelee(Weapon& moddedWeapon, attackData& currAttack, int weaponTypeIndex, Enemy& currEnemy, weaponModConfig& currModConfig)
@@ -743,7 +782,7 @@ std::tuple<double, double, double> calculateDPSValuesMelee(Weapon& moddedWeapon,
             double averageStatusCount = damageTypes[i] * avgStatusCountConstants * baseStatusDurations[i];
 
             // round down if above cap
-            double finalStatusCount = std::min(averageStatusCount, statusCaps[i]);
+            double finalStatusCount = (std::min)(averageStatusCount, statusCaps[i]);
 
             distinctStatusCount += (finalStatusCount >= 1);
 
@@ -772,16 +811,22 @@ std::tuple<double, double, double> calculateDPSValuesMelee(Weapon& moddedWeapon,
         // std::cout << "I got here three!\n";
     // std::cout << "totalDamage is: " << totalDamage << " crit chance is: " << currAttack.critChance << " crit damage is: " << currAttack.critMultiplier << " and avg single shot dmg is: " << averageSingleShot << std::endl;
 
+    double baseAvgDot = totalDamage * multishotValue * statusDamageModifier * 6 * statusDurationModifier;
+    double avgSlashDot = baseAvgDot * dotModifier[0];
+    double avgElectricityDot = baseAvgDot * dotModifier[1] * (1 + currModConfig.statusTypeModifiers[5]);
+    double avgHeatDot = baseAvgDot * dotModifier[2] * (1 + currModConfig.statusTypeModifiers[3]);
+    double avgToxinDot = baseAvgDot * dotModifier[3] * (1 + currModConfig.statusTypeModifiers[6]);
+    double avgGasDot = baseAvgDot * dotModifier[4] * (1 + currModConfig.statusTypeModifiers[9]);
+
+    double totalAvgDot = (avgSlashDot + avgElectricityDot + avgHeatDot + avgToxinDot + avgGasDot) * totalDamageInverse;
+    double avgTotalAvgDot = totalAvgDot * currAttack.statusChance * statusChanceModifier * ((1 + (statusAndModdedCritChance) * (statusAndModdedCritMultiplier)));;
 
     // Melee DPS
     // Going to have to add a slot for combo mods to choose from for the melee weapons, then i need to update this
     // TODO: update this calculation once combo mod can be chosen
-    double averageSustainedDPS = (averageShot * currAttack.fireRate / moddedWeapon.comboDuration);
+    double averageSustainedDPS = (averageShot * currAttack.fireRate * (1 / moddedWeapon.comboDuration)) + avgTotalAvgDot;
     return { averageSingleShot, 0, averageSustainedDPS };
 }
-
-
-
 
 
 struct weaponType {
@@ -789,7 +834,6 @@ struct weaponType {
     std::string name;
     int parentTypeID;
 };
-
 // returns vector of strings of all compatible mod types
 std::vector<std::string> getValidModTypes(std::string& weaponTypeName, std::vector<weaponType>& weaponTypeTree)
 {
@@ -858,62 +902,24 @@ std::vector<std::string> getValidModTypes(std::string& weaponTypeName, std::vect
 }
 
 
+// --------------------------------------------------GUI SETUP--------------------------------------------------
+// Data
+static ID3D11Device*            g_pd3dDevice = nullptr;
+static ID3D11DeviceContext*     g_pd3dDeviceContext = nullptr;
+static IDXGISwapChain*          g_pSwapChain = nullptr;
+static bool                     g_SwapChainOccluded = false;
+static UINT                     g_ResizeWidth = 0, g_ResizeHeight = 0;
+static ID3D11RenderTargetView*  g_mainRenderTargetView = nullptr;
 
+// Forward declarations of helper functions
+bool CreateDeviceD3D(HWND hWnd);
+void CleanupDeviceD3D();
+void CreateRenderTarget();
+void CleanupRenderTarget();
+LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
-// main function
-int main()
+std::tuple<std::vector<std::vector<std::array<int, 8>>>, std::vector<std::vector<double>>, std::vector<std::array<int, 3>>> calculateBestMods(std::string& weaponName, json& wikiModsData, json& wikiArcaneData, json& wikiPrimaryWeaponData, json& wikiSecondaryWeaponData, json& wikiMeleeWeaponData, int weaponGeneralClassIndex)
 {
-    // std::cout << "I at least ran the main function\n";
-    json wikiPrimaryWeaponData = loadJsonFile("wikiData/wikiExportPrimary.json");
-    json wikiSecondaryWeaponData = loadJsonFile("wikiData/wikiExportSecondary.json");
-    json wikiMeleeWeaponData = loadJsonFile("wikiData/wikiExportMelee.json");
-    json warframeData = loadJsonFile("ExportWarframes_en.json");
-    json SentinelsData = loadJsonFile("ExportSentinels_en.json");
-    json wikiModsData = loadJsonFile("wikiData/wikiExportMods.json");
-    json wikiArcaneData = loadJsonFile("wikiData/wikiExportArcanes.json");
-    std::cout << "I at least loaded the data!\n";
-    
-
-    // retrieve weapon (eventually this will loop to do this for every weapon, or for a specified weapon)
-
-    
-    // ---------------------------------------- USER SETTINGS ----------------------------------------
-    bool heatArmorStrip = false;
-    int maxDrain = 999;
-    // ---------------------------------------- USER SETTINGS ----------------------------------------
-    std::string weaponName = "";
-    std::string weaponGeneralClass = "";
-    bool weaponGeneralClassChosen = false;
-    while (!weaponGeneralClassChosen)
-    {
-        std::cout << "What type of weapon do you want to optimize? Type 'Primary', 'Secondary' or 'Melee'\n";
-        std::cin >> weaponGeneralClass;
-        if (weaponGeneralClass == "Primary" || weaponGeneralClass == "Secondary" || weaponGeneralClass == "Melee")
-        {
-            std::cout << "Great! Which " << weaponGeneralClass << " do you want to optimize? Be sure to capitalize each part of it's name, like 'Dual Coda Torxica'\n";
-            weaponGeneralClassChosen = true;
-        }
-        else
-        {
-            std::cout << "Invalid! Please check capitalization and enter again" << std::endl;
-        }
-    }
-
-    int weaponGeneralClassIndex = -1; // 0 == Primary   |   1 == Secondary  |   2 == Melee
-    if (weaponGeneralClass.at(0) == 'P')
-    {
-        weaponGeneralClassIndex = 0;
-    }
-    else if (weaponGeneralClass.at(0) == 'S')
-    {
-        weaponGeneralClassIndex = 1;
-    }
-    else
-    {
-        weaponGeneralClassIndex = 2;
-    }
-
-
     json selectedWeaponType;
     std::vector<weaponType> weaponTypeTree;
     if (weaponGeneralClassIndex == 0) {
@@ -979,25 +985,10 @@ int main()
         selectedWeaponType = wikiMeleeWeaponData;
     }
 
-    // clear newline from input
-    std::cin.ignore();
-
-    bool foundWeaponToOptimize = false;
-    while (!foundWeaponToOptimize)
+    if (!selectedWeaponType.contains(weaponName))
     {
-        // change to getline so it reads until newline instead of until a whitespace character
-        std::getline(std::cin, weaponName);
-        std::cout << "Trying to optimize " << weaponName << std::endl;
-        if (!selectedWeaponType.contains(weaponName))
-        {
-            std::cout << "Couldn't find a weapon called " << weaponName << ", please double check spelling and capitalization and try again" << std::endl;
-        }
-        else
-        {
-            foundWeaponToOptimize = true;
-        }
+        std::cerr << "Couldn't find a weapon called " << weaponName << ", please double check spelling and capitalization and try again" << std::endl;
     }
-
 
     nlohmann::json currentChosenWeapon = selectedWeaponType[weaponName];
 
@@ -1161,9 +1152,9 @@ int main()
     std::vector<std::vector<double>> optimalStats = {};
     for (int i = 0; i < weaponList.at(0).attackList.size(); i++)
     {
-        std::array<int, 8> singleShotModIndices = {};
-        std::array<int, 8> burstDPSModIndices = {};
-        std::array<int, 8> sustainedDPSModIndicess = {};
+        std::array<int, 8> singleShotModIndices = {0};
+        std::array<int, 8> burstDPSModIndices = {0};
+        std::array<int, 8> sustainedDPSModIndicess = {0};
         // first vector is a list of the best mods for single shot dps, second vector is a list of the best mods for burst dps, third vector is a list of the bestmods for sustained dps
         std::vector<std::array<int, 8>> attacksModLayouts = {singleShotModIndices, burstDPSModIndices, sustainedDPSModIndicess};
         optimalModChoices.push_back(attacksModLayouts);
@@ -1173,9 +1164,7 @@ int main()
         optimalStats.push_back(attacksStats);
     }
 
-    int optimalSingleShotArcaneIndex = -1;
-    int optimalBurstDPSArcaneIndex = -1;
-    int optimalSustainedDPSArcaneIndex = -1;
+    std::vector<std::array<int, 3>> optimalArcaneIndices = {{-1}};
 
     std::array<double, 14> baseStatusCounts = {0};
 
@@ -1215,7 +1204,7 @@ int main()
             int arcaneCount = validArcanes.size();
 
             // ---------------------------------------- FOR EACH ATTACK ----------------------------------------
-            #pragma omp parallel for collapse(2) schedule(dynamic, 1) shared(optimalModChoices, optimalStats, optimalSingleShotArcaneIndex, optimalBurstDPSArcaneIndex, optimalSustainedDPSArcaneIndex)
+            #pragma omp parallel for collapse(2) schedule(dynamic, 1) shared(optimalModChoices, optimalStats, optimalArcaneIndices)
             for (int attackIndex = 0 ; attackIndex < attackCount; ++attackIndex)
             {
                 for (int arcaneSlotIndex = 0; arcaneSlotIndex < arcaneCount; arcaneSlotIndex++)
@@ -1521,7 +1510,7 @@ int main()
                             {
                                 optimalStats[currentAttack.attackIndex - 1][0] = localOptimalStats[currentAttack.attackIndex - 1][0];
                                 optimalModChoices[currentAttack.attackIndex - 1][0] = localOptimalModChoices[currentAttack.attackIndex - 1][0];
-                                optimalSingleShotArcaneIndex = localOptimalSingleShotArcaneIndex;
+                                optimalArcaneIndices[currentAttack.attackIndex - 1][0] = localOptimalSingleShotArcaneIndex;
                             }
                         }
                     }
@@ -1533,7 +1522,7 @@ int main()
                             {
                                 optimalStats[currentAttack.attackIndex - 1][1] = localOptimalStats[currentAttack.attackIndex - 1][1];
                                 optimalModChoices[currentAttack.attackIndex - 1][1] = localOptimalModChoices[currentAttack.attackIndex - 1][1];
-                                optimalBurstDPSArcaneIndex = localOptimalBurstDPSArcaneIndex;
+                                optimalArcaneIndices[currentAttack.attackIndex - 1][1] = localOptimalBurstDPSArcaneIndex;
                             }
                         }
                     }
@@ -1545,7 +1534,7 @@ int main()
                             {
                                 optimalStats[currentAttack.attackIndex - 1][2] = localOptimalStats[currentAttack.attackIndex - 1][2];
                                 optimalModChoices[currentAttack.attackIndex - 1][2] = localOptimalModChoices[currentAttack.attackIndex - 1][2];
-                                optimalSustainedDPSArcaneIndex = localOptimalSustainedDPSArcaneIndex;
+                                optimalArcaneIndices[currentAttack.attackIndex - 1][2] = localOptimalSustainedDPSArcaneIndex;
                             }
                         }
                     }
@@ -1555,19 +1544,19 @@ int main()
             {
                 std::cout << "For the: " << currentWeapon.name << "'s " << currentWeapon.attackList[i].attackName << " attack, the calculated best stats are as follows: Average shot: " << optimalStats.at(i).at(0) << ", Average burst DPS: " << optimalStats.at(i).at(1) << ", Average Sustained DPS: " << optimalStats.at(i).at(2) << std::endl;
                 std::cout << "Using the following arcane and mods for single shot: \n";
-                std::cout << validArcanes.at(optimalSingleShotArcaneIndex).name << "\n";
+                std::cout << validArcanes.at(optimalArcaneIndices[i][0]).name << "\n";
                 for (int j = 0; j < 8; j++)
                 {
                     std::cout << validModNames.at(optimalModChoices.at(i).at(0).at(j)) << "\n";
                 }
                 std::cout << "Using the following arcane and mods for burst DPS: \n";
-                std::cout << validArcanes.at(optimalBurstDPSArcaneIndex).name << "\n";
+                std::cout << validArcanes.at(optimalArcaneIndices[i][1]).name << "\n";
                 for (int j = 0; j < 8; j++)
                 {
                     std::cout << validModNames.at(optimalModChoices.at(i).at(1).at(j)) << "\n";
                 }
                 std::cout << "Using the following arcane and mods for sustained DPS: \n";
-                std::cout << validArcanes.at(optimalSustainedDPSArcaneIndex).name << "\n";
+                std::cout << validArcanes.at(optimalArcaneIndices[i][2]).name << "\n";
                 for (int j = 0; j < 8; j++)
                 {
                     std::cout << validModNames.at(optimalModChoices.at(i).at(2).at(j)) << "\n";
@@ -1580,7 +1569,7 @@ int main()
             int arcaneCount = validArcanes.size();
 
             // ---------------------------------------- FOR EACH ATTACK ----------------------------------------
-            #pragma omp parallel for collapse(2) schedule(dynamic, 1) shared(optimalModChoices, optimalStats, optimalSingleShotArcaneIndex, optimalBurstDPSArcaneIndex, optimalSustainedDPSArcaneIndex)
+            #pragma omp parallel for collapse(2) schedule(dynamic, 1) shared(optimalModChoices, optimalStats, optimalArcaneIndices)
             for (int attackIndex = 0 ; attackIndex < attackCount; ++attackIndex)
             {
                 for (int arcaneSlotIndex = 0; arcaneSlotIndex < arcaneCount; arcaneSlotIndex++)
@@ -1880,7 +1869,7 @@ int main()
                             {
                                 optimalStats[currentAttack.attackIndex - 1][0] = localOptimalStats[currentAttack.attackIndex - 1][0];
                                 optimalModChoices[currentAttack.attackIndex - 1][0] = localOptimalModChoices[currentAttack.attackIndex - 1][0];
-                                optimalSingleShotArcaneIndex = localOptimalSingleShotArcaneIndex;
+                                optimalArcaneIndices[currentAttack.attackIndex - 1][0] = localOptimalSingleShotArcaneIndex;
                             }
                         }
                     }
@@ -1892,7 +1881,7 @@ int main()
                             {
                                 optimalStats[currentAttack.attackIndex - 1][2] = localOptimalStats[currentAttack.attackIndex - 1][2];
                                 optimalModChoices[currentAttack.attackIndex - 1][2] = localOptimalModChoices[currentAttack.attackIndex - 1][2];
-                                optimalSustainedDPSArcaneIndex = localOptimalSustainedDPSArcaneIndex;
+                                optimalArcaneIndices[currentAttack.attackIndex - 1][2] = localOptimalSustainedDPSArcaneIndex;
                             }
                         }
                     }
@@ -1902,13 +1891,13 @@ int main()
             {
                 std::cout << "For the: " << currentWeapon.name << "'s " << currentWeapon.attackList[i].attackName << " attack, the calculated best stats are as follows: Average shot: " << optimalStats.at(i).at(0) << ", Average burst DPS: " << optimalStats.at(i).at(1) << ", Average Sustained DPS: " << optimalStats.at(i).at(2) << std::endl;
                 std::cout << "Using the following arcane and mods for single shot: \n";
-                std::cout << validArcanes.at(optimalSingleShotArcaneIndex).name << "\n";
+                std::cout << validArcanes.at(optimalArcaneIndices[i][0]).name << "\n";
                 for (int j = 0; j < 8; j++)
                 {
                     std::cout << validModNames.at(optimalModChoices.at(i).at(0).at(j)) << "\n";
                 }
                 std::cout << "Using the following arcane and mods for sustained DPS: \n";
-                std::cout << validArcanes.at(optimalSustainedDPSArcaneIndex).name << "\n";
+                std::cout << validArcanes.at(optimalArcaneIndices[i][2]).name << "\n";
                 for (int j = 0; j < 8; j++)
                 {
                     std::cout << validModNames.at(optimalModChoices.at(i).at(2).at(j)) << "\n";
@@ -1916,10 +1905,249 @@ int main()
             }
         }
     }
+    std::tuple<std::vector<std::vector<std::array<int, 8>>>, std::vector<std::vector<double>>, std::vector<std::array<int, 3>>> returnTuple = {optimalModChoices, optimalStats, optimalArcaneIndices};
+    return returnTuple;
+}
+
+
+
+
+// main function
+int main()
+{
+    // std::cout << "I at least ran the main function\n";
+    json wikiPrimaryWeaponData = loadJsonFile("wikiData/wikiExportPrimary.json");
+    json wikiSecondaryWeaponData = loadJsonFile("wikiData/wikiExportSecondary.json");
+    json wikiMeleeWeaponData = loadJsonFile("wikiData/wikiExportMelee.json");
+    json warframeData = loadJsonFile("ExportWarframes_en.json");
+    json SentinelsData = loadJsonFile("ExportSentinels_en.json");
+    json wikiModsData = loadJsonFile("wikiData/wikiExportMods.json");
+    json wikiArcaneData = loadJsonFile("wikiData/wikiExportArcanes.json");
+
+
+    std::tuple<std::vector<std::vector<std::array<int, 8>>>, std::vector<std::vector<double>>, std::vector<std::array<int, 3>>> resultTuple = {{{{0}}}, {{0.0}}, {{0}}};
+    double calculationTime = 0;
+
+    // ---------------------------------------- START USER GUI ----------------------------------------
+    // Make process DPI aware and obtain main monitor scale
+    ImGui_ImplWin32_EnableDpiAwareness();
+    float main_scale = ImGui_ImplWin32_GetDpiScaleForMonitor(::MonitorFromPoint(POINT{ 0, 0 }, MONITOR_DEFAULTTOPRIMARY));
+
+    // Create application window
+    WNDCLASSEXW wc = { sizeof(wc), CS_CLASSDC, WndProc, 0L, 0L, GetModuleHandle(nullptr), nullptr, nullptr, nullptr, nullptr, L"ImGui Example", nullptr };
+    ::RegisterClassExW(&wc);
+    HWND hwnd = ::CreateWindowW(wc.lpszClassName, L"Dear ImGui DirectX11 Example", WS_OVERLAPPEDWINDOW, 100, 100, (int)(1280 * main_scale), (int)(800 * main_scale), nullptr, nullptr, wc.hInstance, nullptr);
+
+    // Initialize Direct3D
+    if (!CreateDeviceD3D(hwnd))
+    {
+        CleanupDeviceD3D();
+        ::UnregisterClassW(wc.lpszClassName, wc.hInstance);
+        return 1;
+    }
+
+    // Show the window
+    ::ShowWindow(hwnd, SW_SHOWDEFAULT);
+    ::UpdateWindow(hwnd);
+
+    // Setup Dear ImGui context
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGui::StyleColorsDark();
     
-    // waits for user to hit enter to leave program
-    std::cin.get();
+    // Setup Platform/Renderer backends
+    ImGui_ImplWin32_Init(hwnd);
+    bool ok = ImGui_ImplDX11_Init(g_pd3dDevice, g_pd3dDeviceContext);
+    printf("ImGui_ImplDX11_Init returned %d\n", ok);
+
+    // Our state
+    bool show_demo_window = true;
+    bool show_another_window = false;
+    ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
+
+    bool closeThisWindow = false;
+    while (!closeThisWindow)
+    {
+        MSG msg;
+        while (::PeekMessageW(&msg, nullptr, 0U, 0U, PM_REMOVE))
+        {
+            ::TranslateMessage(&msg);
+            ::DispatchMessage(&msg);
+            if (msg.message == WM_QUIT)
+            {
+                closeThisWindow = true;
+            }
+        }
+        if (closeThisWindow)
+        {
+            break;
+        }
+
+        ImGui_ImplDX11_NewFrame();
+        ImGui_ImplWin32_NewFrame();
+
+        ImGui::NewFrame();
+
+        if (ImGui::Begin("Damage Optimizer"))
+        {
+            ImGui::Text("Weapon slot:");
+            
+            ImVec2 buttonSize = ImVec2(100, 100);
+            
+            static int selectedWeaponType = 0;
+            if (ImGui::Selectable("Primary", selectedWeaponType == 0, 0, buttonSize))   selectedWeaponType = 0;
+            ImGui::SameLine();
+            if (ImGui::Selectable("Secondary", selectedWeaponType == 1, 0, buttonSize))   selectedWeaponType = 1;
+            ImGui::SameLine();
+            if (ImGui::Selectable("Melee", selectedWeaponType == 2, 0, buttonSize))   selectedWeaponType = 2;
+
+            ImGui::Text("Weapon name:");
+            static std::string weaponName = "";
+            ImGui::InputText(" ", &weaponName);
+
+            if (ImGui::Button("Calculate"))
+            {
+                auto calculationStartTime = std::chrono::steady_clock::now();
+                resultTuple = calculateBestMods(weaponName, wikiModsData, wikiArcaneData, wikiPrimaryWeaponData, wikiSecondaryWeaponData, wikiMeleeWeaponData, selectedWeaponType);
+                auto calculationEndTime = std::chrono::steady_clock::now();
+                std::chrono::duration<double, std::milli> elapsedTime = calculationEndTime - calculationStartTime;
+                calculationTime = elapsedTime.count();
+                calculationTime = calculationTime * 0.001;
+            }
+
+            if (calculationTime != 0)
+            {
+                ImGui::Text("Calculation Time: ");
+                ImGui::SameLine();
+                ImGui::Text(std::to_string(calculationTime).c_str());
+                ImGui::SameLine();
+                ImGui::Text(" seconds");
+            }
+
+        }
+        ImGui::End();
+
+        ImGui::Render();
+        const float clear_color_with_alpha[4] = { clear_color.x * clear_color.w, clear_color.y * clear_color.w, clear_color.z * clear_color.w, clear_color.w };
+        g_pd3dDeviceContext->OMSetRenderTargets(1, &g_mainRenderTargetView, nullptr);
+        g_pd3dDeviceContext->ClearRenderTargetView(g_mainRenderTargetView, clear_color_with_alpha);
+        ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
+
+        // Present
+        HRESULT hr = g_pSwapChain->Present(1, 0);   // Present with vsync
+        //HRESULT hr = g_pSwapChain->Present(0, 0); // Present without vsync
+        g_SwapChainOccluded = (hr == DXGI_STATUS_OCCLUDED);
+    }
+    ImGui_ImplDX11_Shutdown();
+    ImGui_ImplWin32_Shutdown();
+    ImGui::DestroyContext();
+
+    CleanupDeviceD3D();
+    ::DestroyWindow(hwnd);
+    ::UnregisterClassW(wc.lpszClassName, wc.hInstance);
+
+
+    // ---------------------------------------- USER SETTINGS ----------------------------------------
+    bool heatArmorStrip = false;
+    int maxDrain = 999;
+    // ---------------------------------------- USER SETTINGS ----------------------------------------
+    std::string weaponName = "";
+    int weaponGeneralClassIndex = 0;
+
     return 0;
 }
 
 
+
+
+
+
+// ---------------------------------------------------------- IMGUI HELPERS ----------------------------------------------------------
+// Helper functions
+
+bool CreateDeviceD3D(HWND hWnd)
+{
+    // Setup swap chain
+    // This is a basic setup. Optimally could use e.g. DXGI_SWAP_EFFECT_FLIP_DISCARD and handle fullscreen mode differently. See #8979 for suggestions.
+    DXGI_SWAP_CHAIN_DESC sd;
+    ZeroMemory(&sd, sizeof(sd));
+    sd.BufferCount = 2;
+    sd.BufferDesc.Width = 0;
+    sd.BufferDesc.Height = 0;
+    sd.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+    sd.BufferDesc.RefreshRate.Numerator = 60;
+    sd.BufferDesc.RefreshRate.Denominator = 1;
+    sd.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
+    sd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+    sd.OutputWindow = hWnd;
+    sd.SampleDesc.Count = 1;
+    sd.SampleDesc.Quality = 0;
+    sd.Windowed = TRUE;
+    sd.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
+
+    UINT createDeviceFlags = 0;
+    //createDeviceFlags |= D3D11_CREATE_DEVICE_DEBUG;
+    D3D_FEATURE_LEVEL featureLevel;
+    const D3D_FEATURE_LEVEL featureLevelArray[2] = { D3D_FEATURE_LEVEL_11_0, D3D_FEATURE_LEVEL_10_0, };
+    HRESULT res = D3D11CreateDeviceAndSwapChain(nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr, createDeviceFlags, featureLevelArray, 2, D3D11_SDK_VERSION, &sd, &g_pSwapChain, &g_pd3dDevice, &featureLevel, &g_pd3dDeviceContext);
+    if (res == DXGI_ERROR_UNSUPPORTED) // Try high-performance WARP software driver if hardware is not available.
+        res = D3D11CreateDeviceAndSwapChain(nullptr, D3D_DRIVER_TYPE_WARP, nullptr, createDeviceFlags, featureLevelArray, 2, D3D11_SDK_VERSION, &sd, &g_pSwapChain, &g_pd3dDevice, &featureLevel, &g_pd3dDeviceContext);
+    if (res != S_OK)
+        return false;
+
+    CreateRenderTarget();
+    return true;
+}
+
+void CleanupDeviceD3D()
+{
+    CleanupRenderTarget();
+    if (g_pSwapChain) { g_pSwapChain->Release(); g_pSwapChain = nullptr; }
+    if (g_pd3dDeviceContext) { g_pd3dDeviceContext->Release(); g_pd3dDeviceContext = nullptr; }
+    if (g_pd3dDevice) { g_pd3dDevice->Release(); g_pd3dDevice = nullptr; }
+}
+
+void CreateRenderTarget()
+{
+    ID3D11Texture2D* pBackBuffer;
+    g_pSwapChain->GetBuffer(0, IID_PPV_ARGS(&pBackBuffer));
+    g_pd3dDevice->CreateRenderTargetView(pBackBuffer, nullptr, &g_mainRenderTargetView);
+    pBackBuffer->Release();
+}
+
+void CleanupRenderTarget()
+{
+    if (g_mainRenderTargetView) { g_mainRenderTargetView->Release(); g_mainRenderTargetView = nullptr; }
+}
+
+// Forward declare message handler from imgui_impl_win32.cpp
+extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
+
+// Win32 message handler
+// You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if dear imgui wants to use your inputs.
+// - When io.WantCaptureMouse is true, do not dispatch mouse input data to your main application, or clear/overwrite your copy of the mouse data.
+// - When io.WantCaptureKeyboard is true, do not dispatch keyboard input data to your main application, or clear/overwrite your copy of the keyboard data.
+// Generally you may always pass all inputs to dear imgui, and hide them from your application based on those two flags.
+LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
+{
+    if (ImGui_ImplWin32_WndProcHandler(hWnd, msg, wParam, lParam))
+        return true;
+
+    switch (msg)
+    {
+    case WM_SIZE:
+        if (wParam == SIZE_MINIMIZED)
+            return 0;
+        g_ResizeWidth = (UINT)LOWORD(lParam); // Queue resize
+        g_ResizeHeight = (UINT)HIWORD(lParam);
+        return 0;
+    case WM_SYSCOMMAND:
+        if ((wParam & 0xfff0) == SC_KEYMENU) // Disable ALT application menu
+            return 0;
+        break;
+    case WM_DESTROY:
+        ::PostQuitMessage(0);
+        return 0;
+    }
+    return ::DefWindowProcW(hWnd, msg, wParam, lParam);
+}
