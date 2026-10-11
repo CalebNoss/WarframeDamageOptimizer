@@ -14,41 +14,39 @@ Computation time is noted in seconds
 Total Search Space is the theoretical count of possible mod combinations
 Completed Calculations is the amount of combinations actually calculated, not pruned by a conflicting mod
 Throughput is the number of configurations checked per seconds, rounded to the nearest full digit
-|:Weapon Name:|:Computation Time:|:Total Search Space:|:Completed Calculations:|:Throughput:|
-|-------------|------------------|--------------------|------------------------|------------|
-|:Rubico Prime:|:1.648723:|:342324444:|:302391236:|:183409363:|
-|:Rubico Prime:|:1.664816:|:342324444:|:302391236:|:181636431:|
-|:Rubico Prime:|:1.710189:|:342324444:|:302391236:|:176817437:|
-|:Rubico Prime:|:1.709812:|:342324444:|:302391236:|:176856424:|
-|:Rubico Prime:|:1.687255:|:342324444:|:302391236:|:179220827:|
-|:Rubico Prime:|:1.674491:|:342324444:|:302391236:|:180586958:|
-|:Ocucor:|:5.781970:|:1450085130:|:1360979880:|:235383421:|
-|:Ocucor:|:5.638175:|:1450085130:|:1360979880:|:241386598:|
-|:Ocucor:|:5.711492:|:1450085130:|:1360979880:|:238287978:|
-|:Ocucor:|:5.699326:|:1450085130:|:1360979880:|:238796637:|
-|:Ocucor:|:5.775666:|:1450085130:|:1360979880:|:235640337:|
-|:Ocucor:|:5.717009:|:1450085130:|:1360979880:|:238058027:|
-|:Gram Prime:|:2.270595:|:453905100:|:433731540:|:191021094:|
-|:Gram Prime:|:2.393940:|:453905100:|:433731540:|:181178952:|
-|:Gram Prime:|:2.404077:|:453905100:|:433731540:|:180414995:|
-|:Gram Prime:|:2.309869:|:453905100:|:433731540:|:187773220:|
-|:Gram Prime:|:2.356009:|:453905100:|:433731540:|:184095876:|
-|:Gram Prime:|:2.357213:|:453905100:|:433731540:|:184001845:|
+|Weapon Name|Computation Time|Total Search Space|Completed Calculations|Throughput|
+|:---------:|:--------------:|:----------------:|:--------------------:|:--------:|
+|Rubico Prime|1.648723|342324444|302391236|183409363|
+|Rubico Prime|1.664816|342324444|302391236|181636431|
+|Rubico Prime|1.710189|342324444|302391236|176817437|
+|Rubico Prime|1.709812|342324444|302391236|176856424|
+|Rubico Prime|1.687255|342324444|302391236|179220827|
+|Rubico Prime|1.674491|342324444|302391236|180586958|
+|Ocucor|5.781970|1450085130|1360979880|235383421|
+|Ocucor|5.638175|1450085130|1360979880|241386598|
+|Ocucor|5.711492|1450085130|1360979880|238287978|
+|Ocucor|5.699326|1450085130|1360979880|238796637|
+|Ocucor|5.775666|1450085130|1360979880|235640337|
+|Ocucor|5.717009|1450085130|1360979880|238058027|
+|Gram Prime|2.270595|453905100|433731540|191021094|
+|Gram Prime|2.393940|453905100|433731540|181178952|
+|Gram Prime|2.404077|453905100|433731540|180414995|
+|Gram Prime|2.309869|453905100|433731540|187773220|
+|Gram Prime|2.356009|453905100|433731540|184095876|
+| Gram Prime |2.357213|453905100|433731540|184001845|
 
 #### *** TESTED WEAPONS AVERAGE STATS ***
-|:Weapon Name:|:Average Computation Time:|:Average Throughput:|
-|-------------|--------------------------|--------------------|
-|:Rubico Prime:|:1.68255:|:179754573:|
-|:Ocucor:|:5.72061:|:237925499:|
-|:Gram Prime:|:2.34862:|:184747664:|
+|Weapon Name|Average Computation Time|Average Throughput|
+|:---------:|:----------------------:|:----------------:|
+|Rubico Prime|1.68255|179754573|
+|Ocucor|5.72061|237925499|
+|Gram Prime|2.34862|184747664|
 
 
 ### *** OPTIMIZATION HISTORY ***
-|:Weapon Name:|:Computation Time:|:Total Search Space:|:Optimizations:|:Notes:|
-|-------------|------------------|--------------------|---------------|-------|
-|Rubico Prime|||||
-|Rubico Prime|||||
-|Rubico Prime|||||
+WIP SECTION   I don't want to put data here before I go back and reimplement the trackers for completed calcs and whatnot in old implementations to get exact data, so this section is a WIP. Some general data is in the commit messaged for the rubico prime test case, but they are general estimates not exact data so I am not putting them here.
+|Weapon Name|Computation Time|Total Search Space|Optimizations|Notes|
+|:---------:|:--------------:|:----------------:|:-----------:|:---:|
 
 ## *** Project Summary ***
 ### *** SUMMARY FOR THOSE THAT DON"T KNOW WARFRAME ***
