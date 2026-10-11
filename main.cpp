@@ -249,7 +249,7 @@ std::tuple<double, double, double> calculateDPSValuesRanged(Weapon& moddedWeapon
     double avgTotalAvgDot = totalAvgDot * currAttack.statusChance * statusChanceModifier * ((1 + (statusAndModdedCritChance) * (statusAndModdedCritMultiplier)));;
 
     // Starting Values
-    double averageBurstDPS = avgTotalAvgDot;
+    double averageBurstDPS = 0;
     double numberOfShotsPerMag = 0;
     double averageSustainedDPS = avgTotalAvgDot;
     double ammoCostPerShotInverse = 1;
@@ -446,7 +446,7 @@ std::tuple<double, double, double> calculateDPSValuesRangedCharge(Weapon& modded
     double avgTotalAvgDot = totalAvgDot * currAttack.statusChance * statusChanceModifier * ((1 + (statusAndModdedCritChance) * (statusAndModdedCritMultiplier)));;
 
     // Starting Values
-    double averageBurstDPS = avgTotalAvgDot;
+    double averageBurstDPS = 0;
     double numberOfShotsPerMag = 0;
     double averageSustainedDPS = avgTotalAvgDot;
     double ammoCostPerShotInverse = 1;
@@ -646,7 +646,7 @@ std::tuple<double, double, double> calculateDPSValuesRangedBurst(Weapon& moddedW
 
 
     // Starting Values
-    double averageBurstDPS = avgTotalAvgDot;
+    double averageBurstDPS = 0;
     double numberOfShotsPerMag = 0;
     double averageSustainedDPS = avgTotalAvgDot;
     double ammoCostPerShotInverse = 1;
@@ -918,7 +918,7 @@ void CreateRenderTarget();
 void CleanupRenderTarget();
 LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
-std::tuple<std::vector<std::vector<std::array<std::string, 8>>>, std::vector<std::vector<double>>, std::vector<std::array<std::string, 3>>> calculateBestMods(std::string& weaponName, json& wikiModsData, json& wikiArcaneData, json& wikiPrimaryWeaponData, json& wikiSecondaryWeaponData, json& wikiMeleeWeaponData, int weaponGeneralClassIndex)
+std::tuple<std::vector<std::vector<std::array<std::string, 8>>>, std::vector<std::vector<double>>, std::vector<std::array<std::string, 3>>> calculateBestMods(std::string& weaponName, json& wikiModsData, json& wikiArcaneData, json& wikiPrimaryWeaponData, json& wikiSecondaryWeaponData, json& wikiMeleeWeaponData, int weaponGeneralClassIndex, int& notSkippedCalculations)
 {
     json selectedWeaponType;
     std::vector<weaponType> weaponTypeTree;
@@ -1179,6 +1179,7 @@ std::tuple<std::vector<std::vector<std::array<std::string, 8>>>, std::vector<std
     totalCalculations = totalCalculations * validArcanes.size();
     totalCalculations = totalCalculations * weaponList[0].attackList.size();
     unsigned long long completedCalculations = 0;
+    std::cout << "total calculations for this weapon: " << totalCalculations << "\n";
 
     for (auto& currentWeapon : weaponList)
     {
@@ -1207,7 +1208,7 @@ std::tuple<std::vector<std::vector<std::array<std::string, 8>>>, std::vector<std
             int arcaneCount = validArcanes.size();
 
             // ---------------------------------------- FOR EACH ATTACK ----------------------------------------
-            #pragma omp parallel for collapse(2) schedule(dynamic, 1) shared(optimalModChoices, optimalStats, optimalArcaneIndices)
+            #pragma omp parallel for collapse(2) schedule(dynamic, 1) shared(optimalModChoices, optimalStats, optimalArcaneIndices, notSkippedCalculations)
             for (int attackIndex = 0 ; attackIndex < attackCount; ++attackIndex)
             {
                 for (int arcaneSlotIndex = 0; arcaneSlotIndex < arcaneCount; arcaneSlotIndex++)
@@ -1218,6 +1219,8 @@ std::tuple<std::vector<std::vector<std::array<std::string, 8>>>, std::vector<std
                     int localOptimalSingleShotArcaneIndex = -1;
                     int localOptimalBurstDPSArcaneIndex = -1;
                     int localOptimalSustainedDPSArcaneIndex = -1;
+
+                    int localCompletedCalcs = 0;
                     
                     // ---------------------------------------- BASE MOD CONFIG ----------------------------------------
                     weaponModConfig currentModConfig = weaponModConfig();
@@ -1408,6 +1411,7 @@ std::tuple<std::vector<std::vector<std::array<std::string, 8>>>, std::vector<std
                                                     // ---------------------------------------- CALCULATE DAMAGE ----------------------------------------
                                                     auto [tempAverageShot, tempAverageBurstDPS, tempAverageSustainedDPS] = damageCalcFunction(currentWeapon, currentAttack, weaponGeneralClassIndex, currEnemy, currentModConfig);
                                                             // std::cout << "I calculated the DPS!\n";
+                                                    ++localCompletedCalcs;
                                                     if (tempAverageShot > localOptimalStats.at(currentAttack.attackIndex - 1).at(0))
                                                     {
                                                         localOptimalStats[currentAttack.attackIndex - 1][0] = tempAverageShot;
@@ -1541,6 +1545,10 @@ std::tuple<std::vector<std::vector<std::array<std::string, 8>>>, std::vector<std
                             }
                         }
                     }
+                    #pragma omp critical(notSkippedCalculations)
+                    {
+                        notSkippedCalculations += localCompletedCalcs;
+                    }
                 }
             }
             for (int i = 0; i < currentWeapon.attackList.size(); i++)
@@ -1584,6 +1592,8 @@ std::tuple<std::vector<std::vector<std::array<std::string, 8>>>, std::vector<std
                     int localOptimalBurstDPSArcaneIndex = -1;
                     int localOptimalSustainedDPSArcaneIndex = -1;
                     
+                    int localCompletedCalcs = 0;
+
                     // ---------------------------------------- BASE MOD CONFIG ----------------------------------------
                     weaponModConfig currentModConfig = weaponModConfig();
                     // ---------------------------------------- BASE ENEMY INFO ----------------------------------------
@@ -1773,6 +1783,7 @@ std::tuple<std::vector<std::vector<std::array<std::string, 8>>>, std::vector<std
                                                     // ---------------------------------------- CALCULATE DAMAGE ----------------------------------------
                                                     auto [tempAverageShot, tempAverageBurstDPS, tempAverageSustainedDPS] = calculateDPSValuesMelee(currentWeapon, currentAttack, weaponGeneralClassIndex, currEnemy, currentModConfig);
                                                             // std::cout << "I calculated the DPS!\n";
+                                                    ++localCompletedCalcs;
                                                     if (tempAverageShot > localOptimalStats.at(currentAttack.attackIndex - 1).at(0))
                                                     {
                                                         localOptimalStats[currentAttack.attackIndex - 1][0] = tempAverageShot;
@@ -1887,6 +1898,10 @@ std::tuple<std::vector<std::vector<std::array<std::string, 8>>>, std::vector<std
                                 optimalArcaneIndices[currentAttack.attackIndex - 1][2] = localOptimalSustainedDPSArcaneIndex;
                             }
                         }
+                    }
+                    #pragma omp critical(notSkippedCalculations)
+                    {
+                        notSkippedCalculations += localCompletedCalcs;
                     }
                 }
             }
@@ -2028,10 +2043,12 @@ int main()
             static std::string weaponName = "";
             ImGui::InputText(" ", &weaponName);
 
+            static int notSkippedCalculations = 0;
             if (ImGui::Button("Calculate"))
             {
                 auto calculationStartTime = std::chrono::steady_clock::now();
-                resultTuple = calculateBestMods(weaponName, wikiModsData, wikiArcaneData, wikiPrimaryWeaponData, wikiSecondaryWeaponData, wikiMeleeWeaponData, selectedWeaponType);
+                notSkippedCalculations = 0;
+                resultTuple = calculateBestMods(weaponName, wikiModsData, wikiArcaneData, wikiPrimaryWeaponData, wikiSecondaryWeaponData, wikiMeleeWeaponData, selectedWeaponType, notSkippedCalculations);
                 auto calculationEndTime = std::chrono::steady_clock::now();
                 std::chrono::duration<double, std::milli> elapsedTime = calculationEndTime - calculationStartTime;
                 calculationTime = elapsedTime.count();
@@ -2045,6 +2062,11 @@ int main()
                 ImGui::Text(std::to_string(calculationTime).c_str());
                 ImGui::SameLine();
                 ImGui::Text(" seconds");
+
+                ImGui::Text("Completed Calculations: ");
+                ImGui::SameLine();
+                ImGui::Text(std::to_string(notSkippedCalculations).c_str());
+
                 
 
                 // for each attack
