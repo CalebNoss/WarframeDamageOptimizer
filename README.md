@@ -56,7 +56,7 @@ There is an included python script to pull the data from the Warframe wiki (orig
 
 
 ### ***SUMMARY FOR THOSE THAT KNOW WARFRAME***
-It has been a longstanding hope of mine to create an application that can calculate the mathematically highest damage (single shot, burst DPS, & sustained DPS) possible in Warframe. This app does not do that, at least not yet. What it does do is calculate the mathematically highest damage (single shot, burst DPS, & sustained DPS) for implemented mods and arcanes. For now that means it does not take into account innate weapon buffs like incarnon mods, kuva weapon mods, etc. It also does not (yet) account for warframe buffs or warframe slot arcanes that buff weapons (like Arcane Arachne).  
+It has been a longstanding hope of mine to create an application that can calculate the mathematically highest damage (single shot, burst DPS, & sustained DPS) possible in Warframe. This app does not do that, at least not yet. What it does do is calculate the mathematically highest damage (single shot, burst DPS, & sustained DPS) for implemented mods and arcanes. For now that means it does not take into account innate weapon buffs like incarnon mods, kuva weapon mods, etc. It also does not (yet) account for warframe buffs or warframe slot arcanes that buff weapons (like Arcane Arachne). Nor does it calculate all the permutations of elemental combinations for the chosen mods (yet, this is next in the implementation list though).  
 I don't think anything can because not even DE actually knows all the weird interactions, and, try as I might I don't want to add hyperoptimizations like shooting through a Mutalist Quanta orb, or calculating the optimized arcane and mods per attack per frame, etc. I am making the baseline, these builds *can* be brought further with more work and more interactions (Warframes, Abilities, Items, Teammates, Rivens, etc.), but this should make a very good starting point using the currently implemented features.
 
 ## ***Assumptions***
@@ -67,7 +67,7 @@ I don't think anything can because not even DE actually knows all the weird inte
 5. Arcanes and temporary buffs like Galvanized mods will be assumed at max stacks if they are based on kills or warframe stats (armor, max energy, etc.), and will be at their avg stacks over an infinite amount of time if they are like Primary Blight
 6. Heat Armor strip won't be considered, because an enemy would need to live 2 seconds for that and hopefully that won't happen. You can always outsource armor strip to styanax's helminth or corrosive shards/hydroid/etc.        -   Maybe changed with toggles, but not yet
 
-Why:  
+### Why are bane mods (increased damage against specific factions) not included in the damage calculations?    
 1. Removing faction specific mods like bane, cleanse, etc. reduces the mod configs drastically speeding up calculation time.
 2. There is no way for me to know which faction you are going against
 3. Not all factions even have a corresponding mod anyways
@@ -76,13 +76,13 @@ Why:
 
 
 ## ***Roadmap***
-1.  [100%] - Load All Data  
-    1a.  [100%] - Parse weapons into Weapon class, and adjust DPS calc to match
-2.  [100%] - Filter to only include compatible mods
-3.  [100%] - Find best mods for raw damage  
-    3a.  [100%] - Find way to turn written description into stats that can be used    -   manual parser to allow for maximum control in development and testing phase
-4.  [100%] - Account for Status DOT
-5.  [100%] - Account for Status Effect Debuffs (Cold/Puncture)
+1.  [X] - Load All Data  
+    1a.  [X] - Parse weapons into Weapon class, and adjust DPS calc to match
+2.  [X] - Filter to only include compatible mods
+3.  [X] - Find best mods for raw damage  
+    3a.  [X] - Find way to turn written description into stats that can be used    -   manual parser to allow for maximum control in development and testing phase
+4.  [X] - Account for Status DOT
+5.  [X] - Account for Status Effect Debuffs (Cold/Puncture)
 6.  [50%] - Account for Arcanes  
     (simple arcanes done, ones with more complex triggers, like activating a stack on heat and/or toxin status effects, or enemies taking increased damage based on cold stacks are not implemented *yet*)
 7.  [ ] - Compute elemental mod permutations
@@ -95,6 +95,5 @@ Why:
 
 ## ***Acknowledgements & Data Sources***
 - Json parsing thanks to nlohmann/json  
-
 - Data in json files for Warframes and Sentinels was downloaded from Digital Extremes public export on 9/18/2026  
 - Data in json files under wikiData was downloaded from the Warframe Wiki's public API on 9/19/2026  
