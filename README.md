@@ -5,15 +5,15 @@ This app calculates the optimal combination of 8 distinct mods and 1 arcane for 
 
 ## ***PERFORMANCE***
 All tests were run on my computer, with the following main specs:
-- CPU:    AMD Ryzen 5 7600X 6-Core Processor
-- GPU:    NVIDIA GeForce RTX 4070 Ti SUPER
-- RAM:    64 GB 6000 MHz DDR5
+- CPU:    AMD Ryzen 5 7600X 6-Core Processor  
+- GPU:    NVIDIA GeForce RTX 4070 Ti SUPER  
+- RAM:    64 GB 6000 MHz DDR5  
 
 ### ***CURRENT PERFORMANCE***
-- Computation time is noted in seconds
-- Total Search Space is the theoretical count of possible mod combinations
-- Completed Calculations is the amount of combinations actually calculated, not pruned by a conflicting mod
-- Throughput is the number of configurations checked per second, rounded to the nearest whole number
+- Computation time is noted in seconds  
+- Total Search Space is the theoretical count of possible mod combinations  
+- Completed Calculations is the amount of combinations actually calculated, not pruned by a conflicting mod  
+- Throughput is the number of configurations checked per second, rounded to the nearest whole number  
 |Weapon Name|Computation Time|Total Search Space|Completed Calculations|Throughput|
 |:---------:|:--------------:|:----------------:|:--------------------:|:--------:|
 |Rubico Prime|1.648723|342,324,444|302,391,236|183,409,363|
@@ -67,28 +67,34 @@ I don't think anything can because not even DE actually knows all the weird inte
 5. Arcanes and temporary buffs like Galvanized mods will be assumed at max stacks if they are based on kills or warframe stats (armor, max energy, etc.), and will be at their avg stacks over an infinite amount of time if they are like Primary Blight
 6. Heat Armor strip won't be considered, because an enemy would need to live 2 seconds for that and hopefully that won't happen. You can always outsource armor strip to styanax's helminth or corrosive shards/hydroid/etc.        -   Maybe changed with toggles, but not yet
 
-Why: Removing faction specific mods like bane, cleanse, etc. reduces the mod configs drastically speeding up calculation time. Also, there is no way for me to know which faction you are going against, and not all factions even have a corresponding mod anyways, and most players don't like using them. Me included.
+Why:  
+1. Removing faction specific mods like bane, cleanse, etc. reduces the mod configs drastically speeding up calculation time.
+2. There is no way for me to know which faction you are going against
+3. Not all factions even have a corresponding mod anyways
+4. Most players don't like using them as it requires swapping builds all the time. I am included in that majority.
 
 
 
 ## ***Roadmap***
-1. Load All Data                                                                -   [X]
-    1a. Parse weapons into Weapon class, and adjust DPS calc to match           -   [X]
-2. Filter to only include compatible mods                                       -   [X]
-3. Find best mods for raw damage                                                -   [X]
-    3a. Find way to turn written description into stats that can be used    -   manual parser to allow for maximum control in development and testing phase
-4. Account for Status DOT                                                       -   [X]
-5. Account for Status Effect Debuffs (Cold/Puncture)                            -   [X]
-6. Account for Arcanes                                                  -   50% DONE (simple arcanes done, ones with more complex triggers, like activating a stack on heat and/or toxin status effects, or enemies taking increased damage based on cold stacks are not implemented *yet*)
-7. Add ability to set 'minimum' values on things like fire rate, accuracy, etc. -   [ ]
-8. Add ability to toggle whether heat strips armor, maybe toggle                -   [ ]
-9. Weapon augment mods                                                          -   [ ]
-10. Account for Warframe Buffs // Maybe?                                        -   [ ]
-11. Account for Sentinel Primers // Maybe?                                      -   [ ]
+1.  [100%] - Load All Data  
+    1a.  [100%] - Parse weapons into Weapon class, and adjust DPS calc to match
+2.  [100%] - Filter to only include compatible mods
+3.  [100%] - Find best mods for raw damage  
+    3a.  [100%] - Find way to turn written description into stats that can be used    -   manual parser to allow for maximum control in development and testing phase
+4.  [100%] - Account for Status DOT
+5.  [100%] - Account for Status Effect Debuffs (Cold/Puncture)
+6.  [50%] - Account for Arcanes  
+    (simple arcanes done, ones with more complex triggers, like activating a stack on heat and/or toxin status effects, or enemies taking increased damage based on cold stacks are not implemented *yet*)
+7.  [ ] - Compute elemental mod permutations
+8.  [ ] - Add ability to set 'minimum' values on things like fire rate, accuracy, etc.
+9.  [ ] - Add ability to toggle whether heat strips armor, maybe toggle
+10. [ ] - Weapon augment mods
+11. [ ] - Account for Warframe Buffs // Maybe?
+12. [ ] - Account for Sentinel Primers // Maybe?
 
 
 ## ***Acknowledgements & Data Sources***
-- Json parsing thanks to nlohmann/json
+- Json parsing thanks to nlohmann/json  
 
-- Data in json files for Warframes and Sentinels was downloaded from Digital Extremes public export on 9/18/2026
-- Data in json files under wikiData was downloaded from the Warframe Wiki's public API on 9/19/2026
+- Data in json files for Warframes and Sentinels was downloaded from Digital Extremes public export on 9/18/2026  
+- Data in json files under wikiData was downloaded from the Warframe Wiki's public API on 9/19/2026  
