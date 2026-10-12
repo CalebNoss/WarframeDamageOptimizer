@@ -22,6 +22,8 @@ class weaponMod
         bool pruneThis = false;                             // whether the mod should be pruned (ie: better version exists so don't count in damage calcs, or no affect on damage outcome (for example, ammo max mods))
         bool modifiesElements = false;
         bool isElementalMod = false;
+        bool isBaseElementalMod = false;
+        int selfBaseElementIndex = -1;  // if -1 then it doesn't affect a base element, else they are 0-3 in HCET order
 
         // list of the index for each entry that is worth something
         unsigned int weaponModifierMask = 0;
@@ -392,6 +394,8 @@ class weaponMod
                                     {   //  Primed Convulsion
                                         this->statusTypeModifiers[5] = 165;
                                         this->isElementalMod = true;
+                                        this->isBaseElementalMod = true;
+                                        this->selfBaseElementIndex = 2;
                                     }
                                     else if (this->description[10] == 'I')
                                     {   //  Primed Heavy Trauma
@@ -401,16 +405,22 @@ class weaponMod
                                     {   //  Primed Fever Strike
                                         this->statusTypeModifiers[6] = 165;
                                         this->isElementalMod = true;
+                                        this->isBaseElementalMod = true;
+                                        this->selfBaseElementIndex = 3;
                                     }
                                     else if (this->description[11] == 'I')
                                     {   //  Primed Heated Charge
                                         this->statusTypeModifiers[3] = 165;
                                         this->isElementalMod = true;
+                                        this->isBaseElementalMod = true;
+                                        this->selfBaseElementIndex = 0;
                                     }
                                     else if (this->description[11] == 'R')
                                     {   //  Primed Cryo Rounds  or  Primed Chilling Grasp
                                         this->statusTypeModifiers[4] = 165;
                                         this->isElementalMod = true;
+                                        this->isBaseElementalMod = true;
+                                        this->selfBaseElementIndex = 1;
                                     }
                                 }
                                 else
@@ -444,6 +454,8 @@ class weaponMod
                                     this->statusTypeModifiers[3] = 60;
                                     this->isElementalMod = true;
                                     this->modifiesElements = true;
+                                    this->isBaseElementalMod = true;
+                                    this->selfBaseElementIndex = 0;
                                 }
                                 else
                                 {   // Martial Fury     |       Lie in Wait     -       Conclave Exclusive
@@ -492,6 +504,8 @@ class weaponMod
                                     this->statusTypeModifiers[5] = 60;
                                     this->isElementalMod = true;
                                     this->modifiesElements = true;
+                                    this->isBaseElementalMod = true;
+                                    this->selfBaseElementIndex = 2;
                                 }
                                 else if (this->description[5] == 'M')
                                 {   //  Ice Storm
@@ -499,6 +513,8 @@ class weaponMod
                                     this->statusTypeModifiers[4] = 40;
                                     this->isElementalMod = true;
                                     this->modifiesElements = true;
+                                    this->isBaseElementalMod = true;
+                                    this->selfBaseElementIndex = 1;
                                 }
                                 else if (this->description[5] == 'R')
                                 {   //  Stunning Speed
@@ -565,6 +581,8 @@ class weaponMod
                                     this->statusTypeModifiers[5] = 60;
                                     this->weaponModifiers[7] = 60;
                                     this->isElementalMod = true;
+                                    this->isBaseElementalMod = true;
+                                    this->selfBaseElementIndex = 2;
                                 }
                                 else if (this->description[9] == 'M')
                                 {   //  Magnetic 60/60 mods
@@ -592,6 +610,8 @@ class weaponMod
                                     this->statusTypeModifiers[6] = 60;
                                     this->weaponModifiers[7] = 60;
                                     this->isElementalMod = true;
+                                    this->isBaseElementalMod = true;
+                                    this->selfBaseElementIndex = 3;
                                 }
                                 else if (this->description[9] == 'R')
                                 {   //  Radiation 60/60 mods
@@ -621,11 +641,15 @@ class weaponMod
                                     this->statusTypeModifiers[3] = 60;
                                     this->weaponModifiers[7] = 60;
                                     this->isElementalMod = true;
+                                    this->isBaseElementalMod = true;
+                                    this->selfBaseElementIndex = 0;
                                 }
                                 else if (this->description[10] == 'R')
                                 {   // Cold 60/60 mods
                                     this->statusTypeModifiers[4] = 60;
                                     this->isElementalMod = true;
+                                    this->isBaseElementalMod = true;
+                                    this->selfBaseElementIndex = 1;
                                     if (this->name == "Chilling Reload")
                                     {   //  Chilling Reload
                                         this->weaponModifiers[9] = 40;
@@ -653,7 +677,9 @@ class weaponMod
                                 this->weaponModifiers[5] = 60;
                                 this->statusTypeModifiers[3] = 60;
                                 this->isElementalMod = true;
+                                this->isBaseElementalMod = true;
                                 this->modifiesElements = true;
+                                this->selfBaseElementIndex = 0;
                             }
                             else if (this->description[5] == 'F')
                             {   //  Fire rate mods
@@ -756,21 +782,29 @@ class weaponMod
                                 {   //  Electric
                                     this->statusTypeModifiers[5] = 90;
                                     this->isElementalMod = true;
+                                    this->isBaseElementalMod = true;
+                                    this->selfBaseElementIndex = 2;
                                 }
                                 else if (this->description[10] == 'I')
                                 {   //  Heat
                                     this->statusTypeModifiers[3] = 90;
                                     this->isElementalMod = true;
+                                    this->isBaseElementalMod = true;
+                                    this->selfBaseElementIndex = 0;
                                 }
                                 else if (this->description[10] == 'R')
                                 {   //  Cold
                                     this->statusTypeModifiers[4] = 90;
                                     this->isElementalMod = true;
+                                    this->isBaseElementalMod = true;
+                                    this->selfBaseElementIndex = 1;
                                 }
                                 else if (this->description[10] == 'O')
                                 {   //  Toxin
                                     this->statusTypeModifiers[6] = 90;
                                     this->isElementalMod = true;
+                                    this->isBaseElementalMod = true;
+                                    this->selfBaseElementIndex = 3;
                                 }
                                 else
                                 {

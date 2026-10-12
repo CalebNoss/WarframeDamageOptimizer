@@ -1030,6 +1030,38 @@ std::tuple<std::vector<std::vector<std::array<std::string, 8>>>, std::vector<std
             continue;
         }
     }
+    for (auto& [modName, modData] : wikiModsData["Mods"].items())
+    {
+        // prune flawed mods here too
+        if (modData.value("IsFlawed", false))
+        {   //  skip this mod, is flawed
+            continue;
+        }
+        else if (std::find(validModTypes.begin(), validModTypes.end(), modData["Type"]) != validModTypes.end())
+        {
+            std::vector<std::string> currentUpgradeTypes = modData.value("UpgradeTypes", std::vector<std::string>{});
+            if (std::find(currentUpgradeTypes.begin(), currentUpgradeTypes.end(), "WEAPON_PERCENT_BASE_DAMAGE_ADDED") != currentUpgradeTypes.end())
+            {   // push back IPS mods next
+                std::string descriptionInfo= modData.value("Description", "");
+                if (descriptionInfo.find("Impact") != std::string::npos ||
+                    descriptionInfo.find("Puncture") != std::string::npos ||
+                    descriptionInfo.find("Slash") != std::string::npos)
+                {
+                    // push entries or default to empty strings/vectors of strings if that field doesn't exist for this mod
+                    validMods.push_back(weaponMod(modData.value("Name", ""), modData.value("Type", ""), modData.value("Description", ""), modData.value("Set", ""), modData.value("Class", ""), modData.value("IncompatibilityTags", std::vector<std::string>{}), modData.value("Incompatible", std::vector<std::string>{}), modData.value("UpgradeTypes", std::vector<std::string>{}), currentValidModsIndex));
+                    //  std::cout << "Adding " << modData.value("Name", " ") << modData.contains("Description") << std::endl;
+                }
+            }
+            else
+            { // skip this mod, not valid
+                continue;
+            }
+        }
+        else
+        { // skip this mod, not valid
+            continue;
+        }
+    }
     int startOfElementalMods = currentValidModsIndex;
     for (auto& [modName, modData] : wikiModsData["Mods"].items())
     {
@@ -1043,9 +1075,21 @@ std::tuple<std::vector<std::vector<std::array<std::string, 8>>>, std::vector<std
             std::vector<std::string> currentUpgradeTypes = modData.value("UpgradeTypes", std::vector<std::string>{});
             if (std::find(currentUpgradeTypes.begin(), currentUpgradeTypes.end(), "WEAPON_PERCENT_BASE_DAMAGE_ADDED") != currentUpgradeTypes.end())
             {   // push back only elemental mods
-                // push entries or default to empty strings/vectors of strings if that field doesn't exist for this mod
-                validMods.push_back(weaponMod(modData.value("Name", ""), modData.value("Type", ""), modData.value("Description", ""), modData.value("Set", ""), modData.value("Class", ""), modData.value("IncompatibilityTags", std::vector<std::string>{}), modData.value("Incompatible", std::vector<std::string>{}), modData.value("UpgradeTypes", std::vector<std::string>{}), currentValidModsIndex));
-                //  std::cout << "Adding " << modData.value("Name", " ") << modData.contains("Description") << std::endl;
+                std::string_view descriptionInfo= modData.value("Description", "");
+                if (descriptionInfo.find("Impact") != std::string_view::npos ||
+                    descriptionInfo.find("Puncture") != std::string_view::npos ||
+                    descriptionInfo.find("Slash") != std::string_view::npos)
+                {
+                    // skip, already handled
+                    continue;
+                }
+                else
+                {
+                    // push entries or default to empty strings/vectors of strings if that field doesn't exist for this mod
+                    validMods.push_back(weaponMod(modData.value("Name", ""), modData.value("Type", ""), modData.value("Description", ""), modData.value("Set", ""), modData.value("Class", ""), modData.value("IncompatibilityTags", std::vector<std::string>{}), modData.value("Incompatible", std::vector<std::string>{}), modData.value("UpgradeTypes", std::vector<std::string>{}), currentValidModsIndex));
+                    //  std::cout << "Adding " << modData.value("Name", " ") << modData.contains("Description") << std::endl;
+
+                }
             }
             else
             { // skip this mod, not valid
